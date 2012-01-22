@@ -20,7 +20,9 @@ import org.brekka.phalanx.crypto.CryptoFactory;
 import org.brekka.phalanx.crypto.CryptoFactoryRegistry;
 import org.brekka.xml.v1.paveway.ResourceInfoDocument.ResourceInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+@Service
 public class ResourceCryptoServiceImpl implements ResourceCryptoService {
 
     @Autowired
