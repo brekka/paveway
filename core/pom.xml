@@ -19,13 +19,23 @@
 			<artifactId>brekka-commons</artifactId>
 			<version>1.0.0</version>
 		</dependency>
-		
+		<dependency>
+			<groupId>org.brekka.phalanx</groupId>
+			<artifactId>phalanx-crypto</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.brekka.paveway</groupId>
+			<artifactId>paveway-schemas</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 			<version>3.1</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>net.iharder</groupId>
 			<artifactId>base64</artifactId>
@@ -49,6 +59,17 @@
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring-version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.2.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>
