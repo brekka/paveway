@@ -1,16 +1,20 @@
 package org.brekka.paveway.services.impl;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.brekka.paveway.services.ResourceCryptoService;
 import org.brekka.paveway.services.ResourceEncryptor;
@@ -32,6 +36,24 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
     public ResourceEncryptor encryptor() {
         CryptoFactory factory = cryptoFactoryRegistry.getDefault();
         return new ResourceEncryptorImpl(factory);
+    }
+    
+    @Override
+    public InputStream decrypt(int cryptoProfileId, byte[] cryptoIv, byte[] symmetricKey, InputStream inputStream) {
+        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
+        IvParameterSpec initializationVector = new IvParameterSpec(cryptoIv);
+        SecretKey secretKey = new SecretKeySpec(symmetricKey, cryptoFactory.getSymmetric().getKeyGenerator().getAlgorithm());
+        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, initializationVector, cryptoFactory.getSymmetric());
+        InputStream cipherInputStream = new CipherInputStream(inputStream, cipher);
+        InputStream gzipInputStream;
+        try {
+            gzipInputStream = new GZIPInputStream(cipherInputStream);
+        } catch (IOException e) {
+            // TODO
+            throw new CryptoException(CryptoErrorCode.CP210, e, 
+                    "GZip problem");
+        }
+        return gzipInputStream;
     }
 
     
