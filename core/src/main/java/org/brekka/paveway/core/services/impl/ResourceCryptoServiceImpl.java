@@ -1,10 +1,12 @@
-package org.brekka.paveway.services.impl;
+package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
+import java.security.MessageDigest;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -16,13 +18,13 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.brekka.paveway.services.ResourceCryptoService;
-import org.brekka.paveway.services.ResourceEncryptor;
-import org.brekka.phalanx.crypto.CryptoErrorCode;
-import org.brekka.phalanx.crypto.CryptoException;
-import org.brekka.phalanx.crypto.CryptoFactory;
-import org.brekka.phalanx.crypto.CryptoFactoryRegistry;
-import org.brekka.xml.v1.paveway.ResourceInfoDocument.ResourceInfo;
+import org.brekka.paveway.core.PavewayErrorCode;
+import org.brekka.paveway.core.PavewayException;
+import org.brekka.paveway.core.model.Compression;
+import org.brekka.paveway.core.services.ResourceCryptoService;
+import org.brekka.paveway.core.services.ResourceEncryptor;
+import org.brekka.phoenix.CryptoFactory;
+import org.brekka.phoenix.CryptoFactoryRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,9 +35,9 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
     private CryptoFactoryRegistry cryptoFactoryRegistry;
     
     @Override
-    public ResourceEncryptor encryptor() {
+    public ResourceEncryptor encryptor(SecretKey secretKey, Compression compression) {
         CryptoFactory factory = cryptoFactoryRegistry.getDefault();
-        return new ResourceEncryptorImpl(factory);
+        return new ResourceEncryptorImpl(factory, secretKey, compression);
     }
     
     @Override
@@ -50,7 +52,7 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
             gzipInputStream = new GZIPInputStream(cipherInputStream);
         } catch (IOException e) {
             // TODO
-            throw new CryptoException(CryptoErrorCode.CP210, e, 
+            throw new PavewayException(PavewayErrorCode.PW400, e, 
                     "GZip problem");
         }
         return gzipInputStream;
@@ -69,7 +71,7 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
         try {
             cipher.init(mode, key, parameter);
         } catch (GeneralSecurityException e) {
-            throw new CryptoException(CryptoErrorCode.CP102, e, 
+            throw new PavewayException(PavewayErrorCode.PW200, e, 
                     "Problem initializing symmetric cipher");
         }
         return cipher;
@@ -77,17 +79,17 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
     
     private class ResourceEncryptorImpl implements ResourceEncryptor {
         
-        private final int profileId;
-        private final SecretKey secretKey;
         private final IvParameterSpec initializationVector;
         private final Cipher cipher;
+        private final MessageDigest messageDigest;
+        private final Compression compression;
         
-        public ResourceEncryptorImpl(CryptoFactory factory) {
+        public ResourceEncryptorImpl(CryptoFactory factory, SecretKey secretKey, Compression compression) {
             CryptoFactory.Symmetric synchronousFactory = factory.getSymmetric();
-            this.secretKey = synchronousFactory.getKeyGenerator().generateKey();
             this.initializationVector = generateInitializationVector(factory);
             this.cipher = getCipher(Cipher.ENCRYPT_MODE, secretKey, initializationVector, synchronousFactory);
-            this.profileId = factory.getProfileId();
+            this.messageDigest = factory.getDigestInstance();
+            this.compression = compression;
         }
         
         /**
@@ -95,25 +97,42 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
          * - Encrypt
          */
         @Override
-        public OutputStream encrypt(OutputStream os) {
-            CipherOutputStream cos = new CipherOutputStream(os, cipher);
-            GZIPOutputStream zos;
-            try {
-                zos = new GZIPOutputStream(cos);
-            } catch (IOException e) {
-                throw new CryptoException(CryptoErrorCode.CP700, e, 
-                        "Failed to create GZIP instance for encryption stream");
+        public OutputStream encrypt(OutputStream finalOs) {
+            DigestOutputStream dos = new DigestOutputStream(finalOs, messageDigest);
+            CipherOutputStream cos = new CipherOutputStream(dos, cipher);
+            OutputStream os;
+            switch (compression) {
+                case GZIP:
+                    try {
+                        os = new GZIPOutputStream(cos);
+                    } catch (IOException e) {
+                        throw new PavewayException(PavewayErrorCode.PW401, e, 
+                                "Failed to create GZIP instance for encryption stream");
+                    }
+                    break;
+                default:
+                    // None;
+                    os = cos;
+                    break;
             }
-            return zos;
+            return os;
         }
         
+        /* (non-Javadoc)
+         * @see org.brekka.paveway.core.services.ResourceEncryptor#getChecksum()
+         */
         @Override
-        public ResourceInfo complete() {
-            ResourceInfo resourceInfo = ResourceInfo.Factory.newInstance();
-            resourceInfo.setProfile(profileId);
-            resourceInfo.setIV(initializationVector.getIV());
-            resourceInfo.setKey(secretKey.getEncoded());
-            return resourceInfo;
+        public byte[] getChecksum() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+        
+        /* (non-Javadoc)
+         * @see org.brekka.paveway.core.services.ResourceEncryptor#getIV()
+         */
+        @Override
+        public IvParameterSpec getIV() {
+            return initializationVector;
         }
     }
 }
