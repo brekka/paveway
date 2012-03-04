@@ -32,7 +32,7 @@ class FileBuilderImpl implements FileBuilder {
     
     private final SecretKey secretKey;
 
-    public FileBuilderImpl(String fileName, String mimeType, long length, Compression compression, CryptoFactory cryptoFactory, 
+    public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
             ResourceCryptoService resourceCryptoService) {
         this.fileName = fileName;
         this.mimeType = mimeType;
@@ -42,7 +42,6 @@ class FileBuilderImpl implements FileBuilder {
         cryptedFile.setParts(new ArrayList<CryptedPart>());
         cryptedFile.setCompression(compression);
         cryptedFile.setProfile(cryptoFactory.getProfileId());
-        cryptedFile.setOriginalLength(length);
         this.cryptedFile = cryptedFile;
         this.secretKey = cryptoFactory.getSymmetric().getKeyGenerator().generateKey();
     }
@@ -60,6 +59,10 @@ class FileBuilderImpl implements FileBuilder {
      */
     public String getMimeType() {
         return mimeType;
+    }
+    
+    public void setLength(long length) {
+        cryptedFile.setOriginalLength(length);
     }
 
     /* (non-Javadoc)
@@ -81,6 +84,13 @@ class FileBuilderImpl implements FileBuilder {
      */
     CryptedFile getCryptedFile() {
         return cryptedFile;
+    }
+    
+    /**
+     * @return the secretKey
+     */
+    SecretKey getSecretKey() {
+        return secretKey;
     }
 
 }
