@@ -3,6 +3,7 @@
  */
 package org.brekka.paveway.core.model;
 
+import java.io.File;
 import java.io.OutputStream;
 
 /**
@@ -18,7 +19,13 @@ public interface PartAllocator {
     
     void setOffset(long offset);
     
-    void setLength(long length);
+    /**
+     * The part length (of the unencrypted). This is a count of the actual bytes received
+     * @return
+     */
+    long getLength();
+    
+    void setBackingFile(File backingFile);
     
     /**
      * Complete the allocation

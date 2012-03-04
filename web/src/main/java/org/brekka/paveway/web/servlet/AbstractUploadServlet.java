@@ -6,7 +6,6 @@ package org.brekka.paveway.web.servlet;
 import java.io.IOException;
 import java.util.List;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +30,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * @author Andrew Taylor
  *
  */
-public class UploadServlet extends HttpServlet {
+public abstract class AbstractUploadServlet extends HttpServlet {
 
     /**
      * Serial UID
@@ -42,13 +41,16 @@ public class UploadServlet extends HttpServlet {
     
     
     /* (non-Javadoc)
-     * @see javax.servlet.GenericServlet#init(javax.servlet.ServletConfig)
+     * @see javax.servlet.GenericServlet#init()
      */
     @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        WebApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(config.getServletContext());
-        pavewayService = applicationContext.getBean(PavewayService.class);
+    public void init() throws ServletException {
+        pavewayService = initPavewayService();
+    }
+    
+    protected PavewayService initPavewayService() {
+        WebApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
+        return applicationContext.getBean(PavewayService.class);
     }
     
     /* (non-Javadoc)
@@ -56,20 +58,16 @@ public class UploadServlet extends HttpServlet {
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        
         HttpSession session = req.getSession();
         EncryptedFileItemFactory factory = (EncryptedFileItemFactory) session.getAttribute(EncryptedFileItemFactory.class.getName());
         if (factory == null) {
-            factory = new EncryptedFileItemFactory(50000, null, pavewayService);
+            factory = new EncryptedFileItemFactory(0, null, pavewayService);
             session.setAttribute(EncryptedFileItemFactory.class.getName(), factory);
         }
 
-        // Create a new file upload handler
-        ServletFileUpload upload = new ServletFileUpload(factory);
-        
         // Parse the request
         try {
-            handle(upload, req, resp);
+            handle(factory, req, resp);
             resp.setStatus(HttpServletResponse.SC_OK);
         } catch (FileUploadException e) {
             throw new PavewayException(PavewayErrorCode.PW800, e, "");
@@ -82,7 +80,10 @@ public class UploadServlet extends HttpServlet {
      * @param upload 
      * 
      */
-    private void handle(ServletFileUpload upload, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
+    private void handle(EncryptedFileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
+        // Create a new file upload handler
+        ServletFileUpload upload = new ServletFileUpload(factory);
+        
         @SuppressWarnings("unchecked")
         List<FileItem> items = upload.parseRequest(req);
         
@@ -92,16 +93,25 @@ public class UploadServlet extends HttpServlet {
             if (fileItem instanceof EncryptedFileItem) {
                 EncryptedFileItem efi = (EncryptedFileItem) fileItem;
                 PartAllocator partAllocator = efi.getPartAllocator();
+                FileBuilder fileBuilder = efi.getFileBuilder();
+                
+                partAllocator.setBackingFile(efi.getStoreLocation());
                 if (xFileName != null) {
                     partAllocator.setOffset(NumberUtils.toLong(req.getHeader("X-Part-Offset")));
-                    partAllocator.setLength(NumberUtils.toLong(req.getHeader("X-Part-Length")));
+                    fileBuilder.setLength(NumberUtils.toLong(req.getHeader("X-File-Size")));
                 } else {
                     partAllocator.setOffset(0);
-                    partAllocator.setLength(fileItem.getSize());
+                    fileBuilder.setLength(partAllocator.getLength());
                 }
                 partAllocator.complete();
-                FileBuilder fileBuilder = efi.getFileBuilder();
+                
+                if (fileBuilder.isComplete()) {
+                    factory.remove(fileBuilder);
+                    handleCompletedFile(fileBuilder, pavewayService);
+                }
             }
         }
     }
+    
+    protected abstract void handleCompletedFile(FileBuilder fileBuilder, PavewayService pavewayService);
 }

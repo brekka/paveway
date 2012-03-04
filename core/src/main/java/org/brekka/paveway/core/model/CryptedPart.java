@@ -13,7 +13,7 @@ import org.brekka.commons.persistence.model.IdentifiableEntity;
  * @author Andrew Taylor
  */
 @Entity
-@Table(name="\"CryptedPart\"", schema="Paveway")
+@Table(name="\"CryptedPart\"")
 public class CryptedPart extends IdentifiableEntity {
     
     /**
@@ -32,13 +32,13 @@ public class CryptedPart extends IdentifiableEntity {
     /**
      * The offset from the start of the file that this part represents.
      */
-    @Column(name="Offset")
+    @Column(name="\"Offset\"")
     private long offset;
     
     /**
      * The length of this part
      */
-    @Column(name="length")
+    @Column(name="\"Length\"")
     private long length;
     
     /**

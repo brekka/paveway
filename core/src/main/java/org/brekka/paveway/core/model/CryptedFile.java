@@ -19,7 +19,7 @@ import org.hibernate.annotations.Type;
  * @author Andrew Taylor
  */
 @Entity
-@Table(name="\"CryptedFile\"", schema="Paveway")
+@Table(name="\"CryptedFile\"")
 public class CryptedFile extends IdentifiableEntity {
     
     /**
@@ -74,7 +74,7 @@ public class CryptedFile extends IdentifiableEntity {
     /**
      * The list of parts that make up this file
      */
-    @OneToMany(fetch=FetchType.EAGER)
+    @OneToMany(fetch=FetchType.EAGER, mappedBy="file")
     private List<CryptedPart> parts;
 
     

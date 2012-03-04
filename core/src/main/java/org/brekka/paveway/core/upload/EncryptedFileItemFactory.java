@@ -15,9 +15,9 @@ import org.brekka.paveway.core.services.PavewayService;
  */
 public class EncryptedFileItemFactory extends DiskFileItemFactory {
 
-    private final PavewayService pavewayService;
+    private final transient PavewayService pavewayService;
     
-    private Map<String, FileBuilder> fileBuilders = new HashMap<String, FileBuilder>();
+    private transient Map<String, FileBuilder> fileBuilders = new HashMap<String, FileBuilder>();
     
     public EncryptedFileItemFactory(int sizeThreshold, File repository, PavewayService pavewayService) {
         super(sizeThreshold, repository);
@@ -42,5 +42,12 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
         EncryptedFileItem result = new EncryptedFileItem(fieldName,
                 fileBuilder, getSizeThreshold(), getRepository());
         return result;
+    }
+
+    /**
+     * @param fileBuilder
+     */
+    public void remove(FileBuilder fileBuilder) {
+        fileBuilders.remove(fileBuilder.getFileName());
     }
 }

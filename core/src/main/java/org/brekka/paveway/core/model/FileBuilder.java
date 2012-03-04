@@ -19,9 +19,16 @@ public interface FileBuilder {
     
     String getMimeType();
     
+    void setLength(long length);
+    
     /**
      * The thing to write the bytes to
      * @return
      */
     PartAllocator allocatePart(OutputStream os);
+
+    /**
+     * @return
+     */
+    boolean isComplete();
 }

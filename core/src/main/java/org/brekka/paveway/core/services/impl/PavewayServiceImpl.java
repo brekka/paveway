@@ -4,13 +4,17 @@
 package org.brekka.paveway.core.services.impl;
 
 
+import java.util.List;
+
 import javax.crypto.SecretKey;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
+import org.brekka.paveway.core.dao.CryptedPartDAO;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
+import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.services.PavewayService;
 import org.brekka.paveway.core.services.ResourceCryptoService;
@@ -21,12 +25,15 @@ import org.brekka.phoenix.CryptoFactory;
 import org.brekka.phoenix.CryptoFactoryRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Andrew Taylor
  *
  */
 @Service
+@Transactional
 public class PavewayServiceImpl implements PavewayService {
 
     @Autowired
@@ -40,6 +47,9 @@ public class PavewayServiceImpl implements PavewayService {
     
     @Autowired
     private CryptedFileDAO cryptedFileDAO;
+    
+    @Autowired
+    private CryptedPartDAO cryptedPartDAO;
     
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.services.PavewayService#begin(java.lang.String)
@@ -59,6 +69,7 @@ public class PavewayServiceImpl implements PavewayService {
      * @see org.brekka.paveway.core.services.PavewayService#complete(java.lang.String, org.brekka.paveway.core.model.FileBuilder)
      */
     @Override
+    @Transactional(propagation=Propagation.REQUIRED)
     public CryptedFile complete(String password, FileBuilder fileBuilder) {
         FileBuilderImpl fileBuilderImpl = narrow(fileBuilder);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
@@ -72,6 +83,7 @@ public class PavewayServiceImpl implements PavewayService {
      * @see org.brekka.paveway.core.services.PavewayService#complete(org.brekka.phalanx.api.model.KeyPair, org.brekka.paveway.core.model.FileBuilder)
      */
     @Override
+    @Transactional(propagation=Propagation.REQUIRED)
     public CryptedFile complete(KeyPair asymKeyPair, FileBuilder fileBuilder) {
         FileBuilderImpl fileBuilderImpl = narrow(fileBuilder);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
@@ -83,6 +95,11 @@ public class PavewayServiceImpl implements PavewayService {
     
     private void complete(CryptedFile cryptedFile, CryptedData cryptedData, FileBuilderImpl fileBuilder) {
         cryptedFile.setCryptedDataId(cryptedData.getId());
+        List<CryptedPart> parts = cryptedFile.getParts();
+        for (CryptedPart cryptedPart : parts) {
+            cryptedPartDAO.create(cryptedPart);
+            // TODO allocate file to its final location.
+        }
         cryptedFileDAO.create(cryptedFile);
     }
     

@@ -18,6 +18,7 @@ public enum PavewayErrorCode implements ErrorCode {
     PW400,
     PW401,
     
+    PW800,
     ;
     
     private static final Area AREA = ErrorCode.Utils.createArea("PW");

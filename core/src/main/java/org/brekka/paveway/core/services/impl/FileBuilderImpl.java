@@ -6,6 +6,9 @@ package org.brekka.paveway.core.services.impl;
 import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import javax.crypto.SecretKey;
 
@@ -77,6 +80,38 @@ class FileBuilderImpl implements FileBuilder {
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
         return new PartAllocatorImpl(encryptor, part, digestInstance);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.model.FileBuilder#isComplete()
+     */
+    @Override
+    public synchronized boolean isComplete() {
+        boolean complete = false;
+        List<CryptedPart> parts = cryptedFile.getParts();
+        if (parts.size() == 1) {
+            CryptedPart cryptedPart = parts.get(0);
+            complete = (cryptedPart.getLength() == cryptedFile.getOriginalLength());
+        } else {
+            List<CryptedPart> sortedParts = new ArrayList<>(parts);
+            Collections.sort(sortedParts, new Comparator<CryptedPart>() {
+                /* (non-Javadoc)
+                 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+                 */
+                @Override
+                public int compare(CryptedPart o1, CryptedPart o2) {
+                    return Long.valueOf(o1.getOffset()).compareTo(o2.getOffset());
+                }
+            });
+            long length = 0;
+            for (CryptedPart cryptedPart : sortedParts) {
+                if (length == cryptedPart.getOffset()) {
+                    length += cryptedPart.getLength();
+                }
+            }
+            complete = (length == cryptedFile.getOriginalLength());
+        }
+        return complete;
     }
     
     /**
