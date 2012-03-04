@@ -8,10 +8,12 @@ import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 
+import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.services.ResourceEncryptor;
+import org.brekka.paveway.core.upload.EncryptedFileItem;
 
 /**
  * @author Andrew Taylor
@@ -25,7 +27,11 @@ public class PartAllocatorImpl implements PartAllocator {
     
     private final MessageDigest messageDigest;
     
-    private File backingFile;
+    /**
+     * Need to keep a strong reference to the file item to prevent the underlying
+     * temp file from being deleted during garbage collection.
+     */
+    private FileItem fileItem;
     
     private CountingOutputStream counter;
     
@@ -52,11 +58,13 @@ public class PartAllocatorImpl implements PartAllocator {
      * @see org.brekka.paveway.core.model.PartAllocator#complete()
      */
     @Override
-    public void complete() {
+    public void complete(FileItem fileItem, long offset) {
         cryptedPart.setIv(resourceEncryptor.getIV().getIV());
         cryptedPart.setOriginalChecksum(messageDigest.digest());
         cryptedPart.setEncryptedChecksum(resourceEncryptor.getChecksum());
         cryptedPart.setLength(counter.getByteCount());
+        cryptedPart.setOffset(offset);
+        this.fileItem = fileItem;
     }
     
     /*
@@ -68,27 +76,18 @@ public class PartAllocatorImpl implements PartAllocator {
         return cryptedPart.getLength();
     }
     
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.PartAllocator#setLength(long)
-     */
-    @Override
-    public void setBackingFile(File backingFile) {
-        this.backingFile = backingFile;
-    }
-    
     /**
      * @return the backingFile
      */
     File getBackingFile() {
-        return backingFile;
+        return ((EncryptedFileItem) fileItem).getStoreLocation();
     }
     
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.PartAllocator#setOffset(long)
+    /**
+     * @return the cryptedPart
      */
-    @Override
-    public void setOffset(long offset) {
-        cryptedPart.setOffset(offset);
+    CryptedPart getCryptedPart() {
+        return cryptedPart;
     }
 
 }

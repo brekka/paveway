@@ -16,7 +16,6 @@ import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
@@ -40,22 +39,30 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
         return new ResourceEncryptorImpl(factory, secretKey, compression);
     }
     
+    
+    
     @Override
-    public InputStream decrypt(int cryptoProfileId, byte[] cryptoIv, byte[] symmetricKey, InputStream inputStream) {
+    public InputStream decrypt(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream inputStream) {
         CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
-        IvParameterSpec initializationVector = new IvParameterSpec(cryptoIv);
-        SecretKey secretKey = new SecretKeySpec(symmetricKey, cryptoFactory.getSymmetric().getKeyGenerator().getAlgorithm());
-        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, initializationVector, cryptoFactory.getSymmetric());
+        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
         InputStream cipherInputStream = new CipherInputStream(inputStream, cipher);
-        InputStream gzipInputStream;
-        try {
-            gzipInputStream = new GZIPInputStream(cipherInputStream);
-        } catch (IOException e) {
-            // TODO
-            throw new PavewayException(PavewayErrorCode.PW400, e, 
-                    "GZip problem");
+        InputStream is;
+        switch (compression) {
+            case GZIP:
+                try {
+                    is = new GZIPInputStream(cipherInputStream);
+                } catch (IOException e) {
+                    // TODO
+                    throw new PavewayException(PavewayErrorCode.PW400, e, 
+                            "GZip problem");
+                }
+                break;
+
+            default:
+                is = cipherInputStream;
+                break;
         }
-        return gzipInputStream;
+        return is;
     }
 
     

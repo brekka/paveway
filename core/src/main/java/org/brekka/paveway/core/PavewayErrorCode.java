@@ -18,6 +18,8 @@ public enum PavewayErrorCode implements ErrorCode {
     PW400,
     PW401,
     
+    PW500,
+    
     PW800,
     ;
     

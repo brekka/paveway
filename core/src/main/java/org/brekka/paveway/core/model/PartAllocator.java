@@ -6,6 +6,8 @@ package org.brekka.paveway.core.model;
 import java.io.File;
 import java.io.OutputStream;
 
+import org.apache.commons.fileupload.FileItem;
+
 /**
  * @author Andrew Taylor
  *
@@ -17,18 +19,14 @@ public interface PartAllocator {
      */
     OutputStream allocate(OutputStream os);
     
-    void setOffset(long offset);
-    
     /**
      * The part length (of the unencrypted). This is a count of the actual bytes received
      * @return
      */
     long getLength();
     
-    void setBackingFile(File backingFile);
-    
     /**
      * Complete the allocation
      */
-    void complete();
+    void complete(FileItem fileItem, long offset);
 }

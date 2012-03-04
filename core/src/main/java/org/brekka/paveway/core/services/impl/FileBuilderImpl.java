@@ -6,8 +6,6 @@ package org.brekka.paveway.core.services.impl;
 import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import javax.crypto.SecretKey;
@@ -34,7 +32,10 @@ class FileBuilderImpl implements FileBuilder {
     private final CryptoFactory cryptoFactory;
     
     private final SecretKey secretKey;
-
+    
+    private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
+    
+    
     public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
             ResourceCryptoService resourceCryptoService) {
         this.fileName = fileName;
@@ -79,7 +80,9 @@ class FileBuilderImpl implements FileBuilder {
         
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
-        return new PartAllocatorImpl(encryptor, part, digestInstance);
+        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, digestInstance);
+        partAllocators.add(partAllocatorImpl);
+        return partAllocatorImpl;
     }
     
     /* (non-Javadoc)
@@ -93,16 +96,7 @@ class FileBuilderImpl implements FileBuilder {
             CryptedPart cryptedPart = parts.get(0);
             complete = (cryptedPart.getLength() == cryptedFile.getOriginalLength());
         } else {
-            List<CryptedPart> sortedParts = new ArrayList<>(parts);
-            Collections.sort(sortedParts, new Comparator<CryptedPart>() {
-                /* (non-Javadoc)
-                 * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
-                 */
-                @Override
-                public int compare(CryptedPart o1, CryptedPart o2) {
-                    return Long.valueOf(o1.getOffset()).compareTo(o2.getOffset());
-                }
-            });
+            List<CryptedPart> sortedParts = PavewayServiceImpl.sortByOffset(parts);
             long length = 0;
             for (CryptedPart cryptedPart : sortedParts) {
                 if (length == cryptedPart.getOffset()) {
@@ -119,6 +113,13 @@ class FileBuilderImpl implements FileBuilder {
      */
     CryptedFile getCryptedFile() {
         return cryptedFile;
+    }
+    
+    /**
+     * @return the partAllocators
+     */
+    List<PartAllocatorImpl> getPartAllocators() {
+        return partAllocators;
     }
     
     /**

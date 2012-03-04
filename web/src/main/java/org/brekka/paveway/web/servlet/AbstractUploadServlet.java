@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.List;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -20,38 +19,20 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
-import org.brekka.paveway.core.services.PavewayService;
 import org.brekka.paveway.core.upload.EncryptedFileItem;
 import org.brekka.paveway.core.upload.EncryptedFileItemFactory;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.WebApplicationContextUtils;
 
 /**
  * @author Andrew Taylor
  *
  */
-public abstract class AbstractUploadServlet extends HttpServlet {
+public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
 
     /**
      * Serial UID
      */
     private static final long serialVersionUID = 4985042386032649934L;
-    
-    private PavewayService pavewayService;
-    
-    
-    /* (non-Javadoc)
-     * @see javax.servlet.GenericServlet#init()
-     */
-    @Override
-    public void init() throws ServletException {
-        pavewayService = initPavewayService();
-    }
-    
-    protected PavewayService initPavewayService() {
-        WebApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
-        return applicationContext.getBean(PavewayService.class);
-    }
+
     
     /* (non-Javadoc)
      * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
@@ -61,7 +42,7 @@ public abstract class AbstractUploadServlet extends HttpServlet {
         HttpSession session = req.getSession();
         EncryptedFileItemFactory factory = (EncryptedFileItemFactory) session.getAttribute(EncryptedFileItemFactory.class.getName());
         if (factory == null) {
-            factory = new EncryptedFileItemFactory(0, null, pavewayService);
+            factory = new EncryptedFileItemFactory(0, null, getPavewayService());
             session.setAttribute(EncryptedFileItemFactory.class.getName(), factory);
         }
 
@@ -95,23 +76,22 @@ public abstract class AbstractUploadServlet extends HttpServlet {
                 PartAllocator partAllocator = efi.getPartAllocator();
                 FileBuilder fileBuilder = efi.getFileBuilder();
                 
-                partAllocator.setBackingFile(efi.getStoreLocation());
+                long offset = 0;
                 if (xFileName != null) {
-                    partAllocator.setOffset(NumberUtils.toLong(req.getHeader("X-Part-Offset")));
+                    offset = NumberUtils.toLong(req.getHeader("X-Part-Offset"));
                     fileBuilder.setLength(NumberUtils.toLong(req.getHeader("X-File-Size")));
                 } else {
-                    partAllocator.setOffset(0);
                     fileBuilder.setLength(partAllocator.getLength());
                 }
-                partAllocator.complete();
+                partAllocator.complete(efi, offset);
                 
                 if (fileBuilder.isComplete()) {
                     factory.remove(fileBuilder);
-                    handleCompletedFile(fileBuilder, pavewayService);
+                    handleCompletedFile(fileBuilder);
                 }
             }
         }
     }
     
-    protected abstract void handleCompletedFile(FileBuilder fileBuilder, PavewayService pavewayService);
+    protected abstract void handleCompletedFile(FileBuilder fileBuilder);
 }
