@@ -86,7 +86,7 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
                 partAllocator.complete(efi, offset);
                 
                 if (fileBuilder.isComplete()) {
-                    factory.remove(fileBuilder);
+                    factory.remove(efi.getName());
                     handleCompletedFile(fileBuilder);
                 }
             }

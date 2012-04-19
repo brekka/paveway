@@ -27,15 +27,14 @@ public class EncryptedFileItem extends DiskFileItem {
     /**
      * @param fieldName
      * @param contentType
-     * @param isFormField
      * @param fileName
+     * @param fileBuilder
      * @param sizeThreshold
      * @param repository
-     * @param encryptor
      */
-    public EncryptedFileItem(String fieldName, FileBuilder fileBuilder,
+    public EncryptedFileItem(String fieldName, String contentType, String fileName, FileBuilder fileBuilder,
             int sizeThreshold, File repository) {
-        super(fieldName, fileBuilder.getMimeType(), false, fileBuilder.getFileName(), sizeThreshold, repository);
+        super(fieldName, contentType, false, fileName, sizeThreshold, repository);
         this.fileBuilder = fileBuilder;
     }
     

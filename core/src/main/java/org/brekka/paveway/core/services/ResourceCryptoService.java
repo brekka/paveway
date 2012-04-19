@@ -1,6 +1,6 @@
 package org.brekka.paveway.core.services;
 
-import java.io.InputStream;
+import java.io.OutputStream;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -11,5 +11,5 @@ public interface ResourceCryptoService {
 
     ResourceEncryptor encryptor(SecretKey secretKey, Compression compression);
 
-    InputStream decrypt(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream inputStream);
+    OutputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, OutputStream os);
 }

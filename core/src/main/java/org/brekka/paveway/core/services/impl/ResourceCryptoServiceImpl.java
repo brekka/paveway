@@ -1,18 +1,15 @@
 package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.spec.AlgorithmParameterSpec;
-import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -42,27 +39,27 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
     
     
     @Override
-    public InputStream decrypt(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream inputStream) {
-        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
-        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
-        InputStream cipherInputStream = new CipherInputStream(inputStream, cipher);
-        InputStream is;
+    public OutputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, OutputStream outputStream) {
+        OutputStream os;
         switch (compression) {
             case GZIP:
                 try {
-                    is = new GZIPInputStream(cipherInputStream);
+                    os = new GZIPOutputStream(outputStream);
                 } catch (IOException e) {
                     // TODO
                     throw new PavewayException(PavewayErrorCode.PW400, e, 
                             "GZip problem");
                 }
                 break;
-
+                
             default:
-                is = cipherInputStream;
+                os = outputStream;
                 break;
         }
-        return is;
+        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
+        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
+        OutputStream cipherOutputStream = new CipherOutputStream(os, cipher);
+        return cipherOutputStream;
     }
 
     
@@ -130,8 +127,7 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
          */
         @Override
         public byte[] getChecksum() {
-            // TODO Auto-generated method stub
-            return null;
+            return messageDigest.digest();
         }
         
         /* (non-Javadoc)

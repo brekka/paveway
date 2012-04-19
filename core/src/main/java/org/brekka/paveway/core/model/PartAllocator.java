@@ -3,7 +3,6 @@
  */
 package org.brekka.paveway.core.model;
 
-import java.io.File;
 import java.io.OutputStream;
 
 import org.apache.commons.fileupload.FileItem;

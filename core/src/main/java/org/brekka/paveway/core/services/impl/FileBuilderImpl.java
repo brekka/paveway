@@ -10,6 +10,7 @@ import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.brekka.paveway.core.model.AllocatedFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
@@ -48,21 +49,6 @@ class FileBuilderImpl implements FileBuilder {
         cryptedFile.setProfile(cryptoFactory.getProfileId());
         this.cryptedFile = cryptedFile;
         this.secretKey = cryptoFactory.getSymmetric().getKeyGenerator().generateKey();
-    }
-
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.FileBuilder#getFileName()
-     */
-    @Override
-    public String getFileName() {
-        return fileName;
-    }
-    
-    /**
-     * @return the mimeType
-     */
-    public String getMimeType() {
-        return mimeType;
     }
     
     public void setLength(long length) {
@@ -108,6 +94,10 @@ class FileBuilderImpl implements FileBuilder {
         return complete;
     }
     
+    public AllocatedFile getAllocatedFile() {
+        return new AllocatedFileImpl(fileName, mimeType, cryptedFile, secretKey);
+    }
+    
     /**
      * @return the cryptedFile
      */
@@ -121,12 +111,4 @@ class FileBuilderImpl implements FileBuilder {
     List<PartAllocatorImpl> getPartAllocators() {
         return partAllocators;
     }
-    
-    /**
-     * @return the secretKey
-     */
-    SecretKey getSecretKey() {
-        return secretKey;
-    }
-
 }

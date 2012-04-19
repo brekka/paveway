@@ -39,15 +39,15 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
             fileBuilders.put(fileName, fileBuilder);
         }
         FileBuilder fileBuilder = fileBuilders.get(fileName);
-        EncryptedFileItem result = new EncryptedFileItem(fieldName,
-                fileBuilder, getSizeThreshold(), getRepository());
+        EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType, 
+                fileName, fileBuilder, getSizeThreshold(), getRepository());
         return result;
     }
 
     /**
      * @param fileBuilder
      */
-    public void remove(FileBuilder fileBuilder) {
-        fileBuilders.remove(fileBuilder.getFileName());
+    public void remove(String fileName) {
+        fileBuilders.remove(fileName);
     }
 }

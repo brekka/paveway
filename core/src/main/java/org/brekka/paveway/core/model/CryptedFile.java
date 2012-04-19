@@ -1,7 +1,6 @@
 package org.brekka.paveway.core.model;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -12,7 +11,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import org.brekka.commons.persistence.model.IdentifiableEntity;
-import org.hibernate.annotations.Type;
 
 /**
  * 
@@ -39,13 +37,6 @@ public class CryptedFile extends IdentifiableEntity {
      */
     @Column(name="Profile")
     private int profile;
-    
-    /**
-     * Id of the crypted data that contains the key used to encrypt this file's parts.
-     */
-    @Type(type="pg-uuid")
-    @Column(name="CryptedDataID")
-    private UUID cryptedDataId;
     
     /**
      * Overall length of the original file
@@ -92,14 +83,6 @@ public class CryptedFile extends IdentifiableEntity {
 
     public void setProfile(int profile) {
         this.profile = profile;
-    }
-
-    public UUID getCryptedDataId() {
-        return cryptedDataId;
-    }
-
-    public void setCryptedDataId(UUID cryptedDataId) {
-        this.cryptedDataId = cryptedDataId;
     }
 
     public long getOriginalLength() {
