@@ -12,13 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
 import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
@@ -33,18 +32,32 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * Serial UID
      */
     private static final long serialVersionUID = 4985042386032649934L;
-
+    
+    private EncryptedFileItemFactory defaultFileItemFactory;
+    
+    /* (non-Javadoc)
+     * @see javax.servlet.GenericServlet#init(javax.servlet.ServletConfig)
+     */
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        defaultFileItemFactory = new EncryptedFileItemFactory(0, null, getPavewayService());
+    }
     
     /* (non-Javadoc)
      * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpSession session = req.getSession();
-        EncryptedMultipartFileItemFactory factory = (EncryptedMultipartFileItemFactory) session.getAttribute(EncryptedMultipartFileItemFactory.class.getName());
-        if (factory == null) {
-            factory = new EncryptedMultipartFileItemFactory(0, null, getPavewayService());
-            session.setAttribute(EncryptedFileItemFactory.class.getName(), factory);
+        
+        String xFileName = req.getHeader("X-File-Name");
+        String xFileType = req.getHeader("X-File-Type");
+        
+        FileItemFactory factory = defaultFileItemFactory;
+        if (xFileName != null 
+                && xFileType != null) {
+            // Special factory
+            factory = multipartFactory(req, xFileName, xFileType);
         }
 
         // Parse the request
@@ -55,6 +68,36 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
             throw new PavewayException(PavewayErrorCode.PW800, e, "");
         }
     }
+    
+    
+
+    /**
+     * @param req
+     * @param xFileName
+     * @param xFileType
+     * @return
+     */
+    protected FileItemFactory multipartFactory(HttpServletRequest req, String xFileName, String xFileType) {
+        MultipartFileBuilderCache cache = getMultipartFileBuilderCache(req);
+        FileBuilder fileBuilder = cache.get(xFileName);
+        if (fileBuilder == null) {
+            fileBuilder = getPavewayService().begin(xFileName, xFileType);
+            cache.add(xFileName, fileBuilder);
+        }
+        return new EncryptedMultipartFileItemFactory(0, null, xFileName, xFileType, fileBuilder);
+    }
+    
+    protected MultipartFileBuilderCache getMultipartFileBuilderCache(HttpServletRequest req) {
+        HttpSession session = req.getSession();
+        String key = MultipartFileBuilderCache.class.getName();
+        
+        MultipartFileBuilderCache cache = (MultipartFileBuilderCache) session.getAttribute(key);
+        if (cache == null) {
+            cache = new MultipartFileBuilderCache();
+            session.setAttribute(key, cache);
+        }
+        return cache;
+    }
 
     /**
      * @param resp 
@@ -62,7 +105,7 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @param upload 
      * 
      */
-    private void handle(EncryptedMultipartFileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
+    private void handle(FileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
         // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);
         
@@ -75,8 +118,10 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    factory.remove(efi.getName());
                     handleCompletedFile(req, fileBuilder);
+                    if (factory instanceof EncryptedMultipartFileItemFactory) {
+                        getMultipartFileBuilderCache(req).remove(efi.getOriginalFileName());
+                    }
                 }
             }
         }

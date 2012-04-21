@@ -30,6 +30,8 @@ public class EncryptedFileItem extends DiskFileItem implements FilePart {
     
     private transient PartAllocator partAllocator;
     
+    private final String originalFileName;
+    
     /**
      * @param fieldName
      * @param contentType
@@ -42,6 +44,7 @@ public class EncryptedFileItem extends DiskFileItem implements FilePart {
             int sizeThreshold, File repository) {
         super(fieldName, contentType, false, fileName, sizeThreshold, repository);
         this.fileBuilder = fileBuilder;
+        this.originalFileName = fileName;
     }
     
     
@@ -81,6 +84,16 @@ public class EncryptedFileItem extends DiskFileItem implements FilePart {
             length = partAllocator.getLength();
         }
         fileBuilder.setLength(length);
-        return fileBuilder;
+        if (fileBuilder.isComplete()) {
+            return fileBuilder;
+        }
+        return null;
+    }
+    
+    /**
+     * @return the originalFileName
+     */
+    public String getOriginalFileName() {
+        return originalFileName;
     }
 }

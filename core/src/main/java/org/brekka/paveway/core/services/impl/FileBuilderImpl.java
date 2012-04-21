@@ -9,6 +9,8 @@ import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.model.AllocatedFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
@@ -110,5 +112,16 @@ class FileBuilderImpl implements FileBuilder {
      */
     List<PartAllocatorImpl> getPartAllocators() {
         return partAllocators;
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+            .append("fileName", fileName)
+            .append("mimeType", mimeType)
+            .toString();
     }
 }

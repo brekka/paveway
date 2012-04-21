@@ -30,14 +30,10 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, fileName);
         }
-        FileBuilder fileBuilder = builderFor(fileName, contentType);
+        FileBuilder fileBuilder = pavewayService.begin(fileName, contentType);
         EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType, 
                 fileName, fileBuilder, getSizeThreshold(), getRepository());
         return result;
-    }
-    
-    protected FileBuilder builderFor(String fileName, String contentType) {
-        return pavewayService.begin(fileName, contentType);
     }
 
 }
