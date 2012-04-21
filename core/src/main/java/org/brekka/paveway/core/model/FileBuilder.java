@@ -3,7 +3,6 @@
  */
 package org.brekka.paveway.core.model;
 
-import java.io.OutputStream;
 
 
 /**
@@ -12,14 +11,11 @@ import java.io.OutputStream;
  */
 public interface FileBuilder {
 
-    
-    
-    
     /**
      * The thing to write the bytes to
      * @return
      */
-    PartAllocator allocatePart(OutputStream os);
+    PartAllocator allocatePart(FilePart partDestination);
 
     void setLength(long length);
     

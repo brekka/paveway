@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
  *
  */
 @Repository
-public class CryptedFileHibernateDAO extends AbstractPavewayDAO<CryptedFile> implements CryptedFileDAO {
+public class CryptedFileHibernateDAO extends AbstractPavewayHibernateDAO<CryptedFile> implements CryptedFileDAO {
 
     /* (non-Javadoc)
      * @see org.brekka.commons.persistence.dao.impl.AbstractIdentifiableEntityHibernateDAO#type()

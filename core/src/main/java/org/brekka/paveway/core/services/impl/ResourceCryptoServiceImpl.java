@@ -1,15 +1,18 @@
 package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -39,12 +42,15 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
     
     
     @Override
-    public OutputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, OutputStream outputStream) {
-        OutputStream os;
+    public InputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream inputStream) {
+        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
+        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
+        InputStream cipherOutputStream = new CipherInputStream(inputStream, cipher);
+        InputStream is;
         switch (compression) {
             case GZIP:
                 try {
-                    os = new GZIPOutputStream(outputStream);
+                    is = new GZIPInputStream(cipherOutputStream);
                 } catch (IOException e) {
                     // TODO
                     throw new PavewayException(PavewayErrorCode.PW400, e, 
@@ -53,13 +59,10 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
                 break;
                 
             default:
-                os = outputStream;
+                is = cipherOutputStream;
                 break;
         }
-        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
-        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
-        OutputStream cipherOutputStream = new CipherOutputStream(os, cipher);
-        return cipherOutputStream;
+        return is;
     }
 
     

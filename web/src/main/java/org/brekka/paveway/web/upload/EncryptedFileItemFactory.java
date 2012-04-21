@@ -1,8 +1,6 @@
-package org.brekka.paveway.core.upload;
+package org.brekka.paveway.web.upload;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -10,14 +8,13 @@ import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.services.PavewayService;
 
 /**
+ * Can be shared
+ * 
  * @author Andrew Taylor
- *
  */
 public class EncryptedFileItemFactory extends DiskFileItemFactory {
 
-    private final transient PavewayService pavewayService;
-    
-    private transient Map<String, FileBuilder> fileBuilders = new HashMap<String, FileBuilder>();
+    protected final transient PavewayService pavewayService;
     
     public EncryptedFileItemFactory(int sizeThreshold, File repository, PavewayService pavewayService) {
         super(sizeThreshold, repository);
@@ -33,21 +30,14 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, fileName);
         }
-        
-        if (!fileBuilders.containsKey(fileName)) {
-            FileBuilder fileBuilder = pavewayService.begin(fileName, contentType);
-            fileBuilders.put(fileName, fileBuilder);
-        }
-        FileBuilder fileBuilder = fileBuilders.get(fileName);
+        FileBuilder fileBuilder = builderFor(fileName, contentType);
         EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType, 
                 fileName, fileBuilder, getSizeThreshold(), getRepository());
         return result;
     }
-
-    /**
-     * @param fileBuilder
-     */
-    public void remove(String fileName) {
-        fileBuilders.remove(fileName);
+    
+    protected FileBuilder builderFor(String fileName, String contentType) {
+        return pavewayService.begin(fileName, contentType);
     }
+
 }

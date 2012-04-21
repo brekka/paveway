@@ -4,9 +4,8 @@
 package org.brekka.paveway.core.services.impl;
 
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,8 +15,8 @@ import java.util.List;
 import java.util.UUID;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
+import org.apache.commons.io.IOUtils;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
@@ -90,14 +89,13 @@ public class PavewayServiceImpl implements PavewayService {
         List<PartAllocatorImpl> partAllocators = fileBuilderImpl.getPartAllocators();
         for (PartAllocatorImpl partAllocatorImpl : partAllocators) {
             UUID partId = partAllocatorImpl.getCryptedPart().getId();
-            File backingFile = partAllocatorImpl.getBackingFile();
-            try (FileInputStream is = new FileInputStream(backingFile)) {
-                resourceStorageService.store(partId, is);
+            try (InputStream  is = partAllocatorImpl.getInputStream(); 
+                 OutputStream os = resourceStorageService.store(partId) ) {
+                IOUtils.copy(is, os);
             } catch (IOException e) {
                 throw new PavewayException(PavewayErrorCode.PW500, e,
                         "Failed to transfer backing file of part '%s' to storage", partId);
             }
-            
         }
         return allocatedFile;
     }
@@ -112,14 +110,8 @@ public class PavewayServiceImpl implements PavewayService {
     }
     
     @Override
-    public void download(CryptedFile cryptedFile, SecretKey secretKey, OutputStream os) {
-        List<CryptedPart> parts = sortByOffset(cryptedFile.getParts());
-        for (CryptedPart cryptedPart : parts) {
-            UUID partId = cryptedPart.getId();
-            IvParameterSpec iv = new IvParameterSpec(cryptedPart.getIv());
-            os = resourceCryptoService.decryptor(cryptedFile.getProfile(), cryptedFile.getCompression(), iv, secretKey, os);
-            resourceStorageService.load(partId, os);
-        }
+    public InputStream download(CryptedFile cryptedFile, SecretKey secretKey) {
+        return new MultipartInputStream(cryptedFile, secretKey, resourceStorageService, resourceCryptoService);
     }
     
     protected FileBuilderImpl narrow(FileBuilder fileBuilder) {

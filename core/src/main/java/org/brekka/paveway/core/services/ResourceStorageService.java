@@ -17,9 +17,9 @@ public interface ResourceStorageService {
      * @param partId
      * @param backingFile
      */
-    void store(UUID id, InputStream is);
+    OutputStream store(UUID id);
 
-    void load(UUID id, OutputStream os);
+    InputStream load(UUID id);
     
     void remove(UUID id);
 }

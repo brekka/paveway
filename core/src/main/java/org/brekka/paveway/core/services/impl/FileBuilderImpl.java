@@ -3,7 +3,6 @@
  */
 package org.brekka.paveway.core.services.impl;
 
-import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +14,7 @@ import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
+import org.brekka.paveway.core.model.FilePart;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceEncryptor;
@@ -59,14 +59,14 @@ class FileBuilderImpl implements FileBuilder {
      * @see org.brekka.paveway.core.model.FileBuilder#allocatePart(java.io.OutputStream, long, long)
      */
     @Override
-    public PartAllocator allocatePart(OutputStream os) {
+    public PartAllocator allocatePart(FilePart partDestination) {
         CryptedPart part = new CryptedPart();
         part.setFile(cryptedFile);
         cryptedFile.getParts().add(part);
         
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
-        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, digestInstance);
+        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, digestInstance, partDestination);
         partAllocators.add(partAllocatorImpl);
         return partAllocatorImpl;
     }

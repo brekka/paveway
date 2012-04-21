@@ -3,9 +3,8 @@
  */
 package org.brekka.paveway.core.model;
 
+import java.io.IOException;
 import java.io.OutputStream;
-
-import org.apache.commons.fileupload.FileItem;
 
 /**
  * @author Andrew Taylor
@@ -16,7 +15,7 @@ public interface PartAllocator {
      * The thing to write the bytes to
      * @return
      */
-    OutputStream allocate(OutputStream os);
+    OutputStream getOutputStream() throws IOException;
     
     /**
      * The part length (of the unencrypted). This is a count of the actual bytes received
@@ -24,8 +23,9 @@ public interface PartAllocator {
      */
     long getLength();
     
+    
     /**
      * Complete the allocation
      */
-    void complete(FileItem fileItem, long offset);
+    void complete(long offset);
 }

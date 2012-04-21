@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Andrew Taylor
  *
  */
-public abstract class AbstractPavewayDAO<Entity extends IdentifiableEntity> extends AbstractIdentifiableEntityHibernateDAO<Entity>  {
+public abstract class AbstractPavewayHibernateDAO<Entity extends IdentifiableEntity> extends AbstractIdentifiableEntityHibernateDAO<Entity>  {
 
 
     @Autowired

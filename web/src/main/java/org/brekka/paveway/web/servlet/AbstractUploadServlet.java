@@ -19,8 +19,9 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
-import org.brekka.paveway.core.upload.EncryptedFileItem;
-import org.brekka.paveway.core.upload.EncryptedFileItemFactory;
+import org.brekka.paveway.web.upload.EncryptedFileItem;
+import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
+import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
 
 /**
  * @author Andrew Taylor
@@ -40,9 +41,9 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         HttpSession session = req.getSession();
-        EncryptedFileItemFactory factory = (EncryptedFileItemFactory) session.getAttribute(EncryptedFileItemFactory.class.getName());
+        EncryptedMultipartFileItemFactory factory = (EncryptedMultipartFileItemFactory) session.getAttribute(EncryptedMultipartFileItemFactory.class.getName());
         if (factory == null) {
-            factory = new EncryptedFileItemFactory(0, null, getPavewayService());
+            factory = new EncryptedMultipartFileItemFactory(0, null, getPavewayService());
             session.setAttribute(EncryptedFileItemFactory.class.getName(), factory);
         }
 
@@ -61,37 +62,25 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @param upload 
      * 
      */
-    private void handle(EncryptedFileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
+    private void handle(EncryptedMultipartFileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
         // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);
         
         @SuppressWarnings("unchecked")
         List<FileItem> items = upload.parseRequest(req);
         
-        String xFileName = req.getHeader("X-File-Name");
-        
         for (FileItem fileItem : items) {
             if (fileItem instanceof EncryptedFileItem) {
                 EncryptedFileItem efi = (EncryptedFileItem) fileItem;
-                PartAllocator partAllocator = efi.getPartAllocator();
-                FileBuilder fileBuilder = efi.getFileBuilder();
-                
-                long offset = 0;
-                if (xFileName != null) {
-                    offset = NumberUtils.toLong(req.getHeader("X-Part-Offset"));
-                    fileBuilder.setLength(NumberUtils.toLong(req.getHeader("X-File-Size")));
-                } else {
-                    fileBuilder.setLength(partAllocator.getLength());
-                }
-                partAllocator.complete(efi, offset);
-                
-                if (fileBuilder.isComplete()) {
+                FileBuilder fileBuilder = efi.complete(req);
+                if (fileBuilder != null) {
+                    // file is complete
                     factory.remove(efi.getName());
-                    handleCompletedFile(fileBuilder);
+                    handleCompletedFile(req, fileBuilder);
                 }
             }
         }
     }
     
-    protected abstract void handleCompletedFile(FileBuilder fileBuilder);
+    protected abstract void handleCompletedFile(HttpServletRequest req, FileBuilder fileBuilder);
 }
