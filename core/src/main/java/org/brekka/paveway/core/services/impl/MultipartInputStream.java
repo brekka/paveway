@@ -56,7 +56,7 @@ class MultipartInputStream extends InputStream {
         if (i == -1) {
             toNextStream();
             if (current != null) {
-                i = 0;
+                i = current.read(b, off, len);
             }
         }
         return i;
