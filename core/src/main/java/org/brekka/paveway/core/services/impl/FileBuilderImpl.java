@@ -6,6 +6,7 @@ package org.brekka.paveway.core.services.impl;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -16,10 +17,11 @@ import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.FilePart;
+import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceEncryptor;
+import org.brekka.paveway.core.services.ResourceStorageService;
 import org.brekka.phoenix.CryptoFactory;
 
 class FileBuilderImpl implements FileBuilder {
@@ -29,6 +31,8 @@ class FileBuilderImpl implements FileBuilder {
     private final String mimeType;
     
     private final ResourceCryptoService resourceCryptoService;
+    
+    private final ResourceStorageService resourceStorageService;
     
     private final CryptedFile cryptedFile;
     
@@ -40,10 +44,11 @@ class FileBuilderImpl implements FileBuilder {
     
     
     public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
-            ResourceCryptoService resourceCryptoService) {
+            ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService) {
         this.fileName = fileName;
         this.mimeType = mimeType;
         this.resourceCryptoService = resourceCryptoService;
+        this.resourceStorageService = resourceStorageService;
         this.cryptoFactory = cryptoFactory;
         CryptedFile cryptedFile = new CryptedFile();
         cryptedFile.setParts(new ArrayList<CryptedPart>());
@@ -61,11 +66,13 @@ class FileBuilderImpl implements FileBuilder {
      * @see org.brekka.paveway.core.model.FileBuilder#allocatePart(java.io.OutputStream, long, long)
      */
     @Override
-    public PartAllocator allocatePart(FilePart partDestination) {
+    public PartAllocator allocatePart() {
         CryptedPart part = new CryptedPart();
+        UUID partId = UUID.randomUUID();
+        part.setId(partId);
         part.setFile(cryptedFile);
         cryptedFile.getParts().add(part);
-        
+        ByteSequence partDestination = resourceStorageService.allocate(partId);
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
         PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, digestInstance, partDestination);

@@ -4,14 +4,13 @@
 package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 
 import org.apache.commons.io.output.CountingOutputStream;
+import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.CryptedPart;
-import org.brekka.paveway.core.model.FilePart;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.services.ResourceEncryptor;
 
@@ -28,16 +27,15 @@ public class PartAllocatorImpl implements PartAllocator {
     private final MessageDigest messageDigest;
     
     /**
-     * Need to keep a strong reference to the file item to prevent the underlying
-     * temp file from being deleted during garbage collection.
+     * This is where the encrypted data will be stored.
      */
-    private final FilePart partDestination;
+    private final ByteSequence partDestination;
     
     private CountingOutputStream counter;
     
     
     
-    public PartAllocatorImpl(ResourceEncryptor resourceEncryptor, CryptedPart cryptedPart, MessageDigest messageDigest, FilePart partDestination) {
+    public PartAllocatorImpl(ResourceEncryptor resourceEncryptor, CryptedPart cryptedPart, MessageDigest messageDigest, ByteSequence partDestination) {
         this.resourceEncryptor = resourceEncryptor;
         this.cryptedPart = cryptedPart;
         this.messageDigest = messageDigest;
@@ -74,11 +72,6 @@ public class PartAllocatorImpl implements PartAllocator {
     @Override
     public long getLength() {
         return cryptedPart.getLength();
-    }
-    
-    
-    InputStream getInputStream() throws IOException {
-        return partDestination.getInputStream();
     }
     
     /**

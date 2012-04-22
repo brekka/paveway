@@ -3,23 +3,19 @@ package org.brekka.paveway.web.upload;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItem;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
-import org.brekka.paveway.core.model.FilePart;
 
 /**
  * @author Andrew Taylor
  *
  */
-public class EncryptedFileItem extends DiskFileItem implements FilePart {
+public class EncryptedFileItem extends AbstractFileItem {
 
     /**
      * Serial UID
@@ -42,7 +38,7 @@ public class EncryptedFileItem extends DiskFileItem implements FilePart {
      */
     public EncryptedFileItem(String fieldName, String contentType, String fileName, FileBuilder fileBuilder,
             int sizeThreshold, File repository) {
-        super(fieldName, contentType, false, fileName, sizeThreshold, repository);
+        super(fileName, contentType, fieldName);
         this.fileBuilder = fileBuilder;
         this.originalFileName = fileName;
     }
@@ -50,21 +46,11 @@ public class EncryptedFileItem extends DiskFileItem implements FilePart {
     
     @Override
     public OutputStream getOutputStream() throws IOException {
-        final OutputStream outputStream = super.getOutputStream();
-        final FileItem fileItem = this; 
-        partAllocator = fileBuilder.allocatePart(new FilePart() {
-            @Override
-            public OutputStream getOutputStream() throws IOException {
-                return outputStream;
-            }
-            @Override
-            public InputStream getInputStream() throws IOException {
-                return fileItem.getInputStream();
-            }
-        });
+        partAllocator = fileBuilder.allocatePart();
         OutputStream encryptionOutputStream = partAllocator.getOutputStream();
         return encryptionOutputStream;
     }
+    
     
     /**
      * @param req does not have to be set

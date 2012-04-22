@@ -3,9 +3,9 @@
  */
 package org.brekka.paveway.core.services;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.UUID;
+
+import org.brekka.paveway.core.model.ByteSequence;
 
 /**
  * @author Andrew Taylor
@@ -13,13 +13,17 @@ import java.util.UUID;
  */
 public interface ResourceStorageService {
 
-    /**
-     * @param partId
-     * @param backingFile
-     */
-    OutputStream store(UUID id);
-
-    InputStream load(UUID id);
+//    /**
+//     * @param partId
+//     * @param backingFile
+//     */
+//    OutputStream store(UUID id);
+//
+//    InputStream load(UUID id);
+    
+    ByteSequence allocate(UUID id);
+    
+    ByteSequence retrieve(UUID id);
     
     void remove(UUID id);
 }

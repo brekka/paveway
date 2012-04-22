@@ -4,9 +4,7 @@
 package org.brekka.paveway.core.services.impl;
 
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,7 +14,6 @@ import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.io.IOUtils;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
@@ -70,7 +67,8 @@ public class PavewayServiceImpl implements PavewayService {
             compression = Compression.GZIP;
         }
         CryptoFactory defaultFactory = cryptoFactoryRegistry.getDefault();
-        return new FileBuilderImpl(fileName, mimeType, compression, defaultFactory, resourceCryptoService);
+        return new FileBuilderImpl(fileName, mimeType, compression, defaultFactory, 
+                resourceCryptoService, resourceStorageService);
     }
     
     @Override
@@ -84,19 +82,6 @@ public class PavewayServiceImpl implements PavewayService {
             cryptedPartDAO.create(cryptedPart);
         }
         cryptedFileDAO.create(cryptedFile);
-        
-        // Needs to take place after the part ids have been assigned.
-        List<PartAllocatorImpl> partAllocators = fileBuilderImpl.getPartAllocators();
-        for (PartAllocatorImpl partAllocatorImpl : partAllocators) {
-            UUID partId = partAllocatorImpl.getCryptedPart().getId();
-            try (InputStream  is = partAllocatorImpl.getInputStream(); 
-                 OutputStream os = resourceStorageService.store(partId) ) {
-                IOUtils.copy(is, os);
-            } catch (IOException e) {
-                throw new PavewayException(PavewayErrorCode.PW500, e,
-                        "Failed to transfer backing file of part '%s' to storage", partId);
-            }
-        }
         return allocatedFile;
     }
 

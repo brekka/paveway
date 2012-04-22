@@ -13,6 +13,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
 import org.apache.commons.io.IOUtils;
+import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.services.ResourceCryptoService;
@@ -82,7 +83,8 @@ class MultipartInputStream extends InputStream {
         CryptedPart cryptedPart = partsIterator.next();
         UUID partId = cryptedPart.getId();
         IvParameterSpec iv = new IvParameterSpec(cryptedPart.getIv());
-        InputStream is = resourceStorageService.load(partId);
+        ByteSequence byteSequence = resourceStorageService.retrieve(partId);
+        InputStream is = byteSequence.getInputStream();
         this.current = resourceCryptoService.decryptor(cryptedFile.getProfile(), cryptedFile.getCompression(), iv, secretKey, is);
     }
 }
