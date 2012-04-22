@@ -79,6 +79,7 @@ class MultipartInputStream extends InputStream {
         IOUtils.closeQuietly(current);
         if (!partsIterator.hasNext()) {
             this.current = null;
+            return;
         }
         CryptedPart cryptedPart = partsIterator.next();
         UUID partId = cryptedPart.getId();
