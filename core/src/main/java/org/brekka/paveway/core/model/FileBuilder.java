@@ -27,5 +27,10 @@ public interface FileBuilder {
      * @return
      */
     boolean isComplete();
+    
+    /**
+     * Discard this builder, removing any byteStreams that may have been created.
+     */
+    void discard();
 
 }

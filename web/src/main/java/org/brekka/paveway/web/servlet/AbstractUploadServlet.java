@@ -9,7 +9,6 @@ import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
@@ -78,7 +77,7 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @return
      */
     protected FileItemFactory multipartFactory(HttpServletRequest req, String xFileName, String xFileType) {
-        MultipartFileBuilderCache cache = getMultipartFileBuilderCache(req);
+        MultipartFileBuilderCache cache = MultipartFileBuilderCache.get(req);
         FileBuilder fileBuilder = cache.get(xFileName);
         if (fileBuilder == null) {
             fileBuilder = getPavewayService().begin(xFileName, xFileType);
@@ -87,17 +86,7 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
         return new EncryptedMultipartFileItemFactory(0, null, xFileName, xFileType, fileBuilder);
     }
     
-    protected MultipartFileBuilderCache getMultipartFileBuilderCache(HttpServletRequest req) {
-        HttpSession session = req.getSession();
-        String key = MultipartFileBuilderCache.class.getName();
-        
-        MultipartFileBuilderCache cache = (MultipartFileBuilderCache) session.getAttribute(key);
-        if (cache == null) {
-            cache = new MultipartFileBuilderCache();
-            session.setAttribute(key, cache);
-        }
-        return cache;
-    }
+    
 
     /**
      * @param resp 
@@ -120,7 +109,7 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
                     // file is complete
                     handleCompletedFile(req, fileBuilder);
                     if (factory instanceof EncryptedMultipartFileItemFactory) {
-                        getMultipartFileBuilderCache(req).remove(efi.getOriginalFileName());
+                        MultipartFileBuilderCache.get(req).remove(efi.getOriginalFileName());
                     }
                 }
             }

@@ -42,7 +42,6 @@ class FileBuilderImpl implements FileBuilder {
     
     private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
     
-    
     public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
             ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService) {
         this.fileName = fileName;
@@ -114,11 +113,17 @@ class FileBuilderImpl implements FileBuilder {
         return cryptedFile;
     }
     
-    /**
-     * @return the partAllocators
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.model.FileBuilder#discard()
      */
-    List<PartAllocatorImpl> getPartAllocators() {
-        return partAllocators;
+    @Override
+    public void discard() {
+        List<PartAllocatorImpl> partAllocators = this.partAllocators;
+        for (PartAllocatorImpl partAllocatorImpl : partAllocators) {
+            ByteSequence partDestination = partAllocatorImpl.getPartDestination();
+            resourceStorageService.remove(partDestination.getId());
+        }
+        this.partAllocators.clear();
     }
     
     /* (non-Javadoc)

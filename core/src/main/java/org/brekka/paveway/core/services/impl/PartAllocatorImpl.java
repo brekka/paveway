@@ -75,6 +75,13 @@ public class PartAllocatorImpl implements PartAllocator {
     }
     
     /**
+     * @return the partDestination
+     */
+    ByteSequence getPartDestination() {
+        return partDestination;
+    }
+    
+    /**
      * @return the cryptedPart
      */
     CryptedPart getCryptedPart() {
