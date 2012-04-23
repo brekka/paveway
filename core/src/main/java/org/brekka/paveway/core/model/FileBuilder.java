@@ -16,6 +16,18 @@ public interface FileBuilder {
      * @return
      */
     PartAllocator allocatePart();
+    
+    /**
+     * File length
+     * @return
+     */
+    long getLength();
+    
+    /**
+     * File name
+     * @return
+     */
+    String getFileName();
 
     /**
      * Set the length of the file, when known

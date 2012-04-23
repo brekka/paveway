@@ -77,11 +77,10 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @return
      */
     protected FileItemFactory multipartFactory(HttpServletRequest req, String xFileName, String xFileType) {
-        MultipartFileBuilderCache cache = MultipartFileBuilderCache.get(req);
-        FileBuilder fileBuilder = cache.get(xFileName);
+        FileBuilder fileBuilder = retrieveFileBuilder(req, xFileName);
         if (fileBuilder == null) {
             fileBuilder = getPavewayService().begin(xFileName, xFileType);
-            cache.add(xFileName, fileBuilder);
+            retainFileBuilder(req, xFileName, fileBuilder);
         }
         return new EncryptedMultipartFileItemFactory(0, null, xFileName, xFileType, fileBuilder);
     }
@@ -107,14 +106,15 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    handleCompletedFile(req, fileBuilder);
-                    if (factory instanceof EncryptedMultipartFileItemFactory) {
-                        MultipartFileBuilderCache.get(req).remove(efi.getOriginalFileName());
-                    }
+                    completeFileBuilder(req, fileBuilder);
                 }
             }
         }
     }
     
-    protected abstract void handleCompletedFile(HttpServletRequest req, FileBuilder fileBuilder);
+    protected abstract void retainFileBuilder(HttpServletRequest req, String fileName, FileBuilder fileBuilder);
+    
+    protected abstract FileBuilder retrieveFileBuilder(HttpServletRequest req, String fileName);
+    
+    protected abstract void completeFileBuilder(HttpServletRequest req, FileBuilder fileBuilder);
 }

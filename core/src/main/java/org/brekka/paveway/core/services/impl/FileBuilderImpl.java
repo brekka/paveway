@@ -60,6 +60,17 @@ class FileBuilderImpl implements FileBuilder {
     public void setLength(long length) {
         cryptedFile.setOriginalLength(length);
     }
+    
+    public long getLength() {
+        return cryptedFile.getOriginalLength();
+    }
+    
+    /**
+     * @return the fileName
+     */
+    public String getFileName() {
+        return fileName;
+    }
 
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.model.FileBuilder#allocatePart(java.io.OutputStream, long, long)
