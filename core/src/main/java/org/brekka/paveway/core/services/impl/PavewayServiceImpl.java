@@ -84,6 +84,22 @@ public class PavewayServiceImpl implements PavewayService {
         cryptedFileDAO.create(cryptedFile);
         return allocatedFile;
     }
+    
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.services.PavewayService#remove(org.brekka.paveway.core.model.CryptedFile)
+     */
+    @Override
+    @Transactional(propagation=Propagation.REQUIRED)
+    public void remove(UUID cryptedFileId) {
+        CryptedFile cryptedFile = cryptedFileDAO.retrieveById(cryptedFileId);
+        List<CryptedPart> parts = cryptedFile.getParts();
+        for (CryptedPart cryptedPart : parts) {
+            UUID partId = cryptedPart.getId();
+            resourceStorageService.remove(partId);
+            cryptedPartDAO.delete(partId);
+        }
+        cryptedFileDAO.delete(cryptedFileId);
+    }
 
     
     /* (non-Javadoc)

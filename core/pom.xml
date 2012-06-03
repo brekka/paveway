@@ -17,7 +17,7 @@
 		<dependency>
 			<groupId>org.brekka</groupId>
 			<artifactId>brekka-commons</artifactId>
-			<version>1.0.0</version>
+			<version>1.1.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.brekka.phoenix</groupId>
@@ -86,6 +86,11 @@
 			<artifactId>mockito-all</artifactId>
 			<version>1.8.4</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>commons-io</groupId>
+		    <artifactId>commons-io</artifactId>
+		    <version>2.3</version>
 		</dependency>
 	</dependencies>
 

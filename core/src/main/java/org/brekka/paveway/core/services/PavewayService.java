@@ -26,5 +26,5 @@ public interface PavewayService {
     
     InputStream download(CryptedFile file, SecretKey secretKey);
     
-    
+    void remove(UUID cryptedFileId);
 }
