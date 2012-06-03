@@ -7,13 +7,14 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.brekka.commons.persistence.model.IdentifiableEntity;
+import org.brekka.paveway.core.PavewayConstants;
 
 /**
  * 
  * @author Andrew Taylor
  */
 @Entity
-@Table(name="\"CryptedPart\"")
+@Table(name="`CryptedPart`", schema=PavewayConstants.SCHEMA)
 public class CryptedPart extends IdentifiableEntity {
     
     /**
@@ -25,38 +26,38 @@ public class CryptedPart extends IdentifiableEntity {
     /**
      * The file that 'this' is a part of.
      */
-    @JoinColumn(name="CryptedFileID")
+    @JoinColumn(name="`CryptedFileID`")
     @ManyToOne()
     private CryptedFile file;
     
     /**
      * The offset from the start of the file that this part represents.
      */
-    @Column(name="\"Offset\"")
+    @Column(name="`Offset`")
     private long offset;
     
     /**
      * The length of this part
      */
-    @Column(name="\"Length\"")
+    @Column(name="`Length`")
     private long length;
     
     /**
      * The encryption initialisation vector
      */
-    @Column(name="IV")
+    @Column(name="`IV`")
     private byte[] iv;
     
     /**
      * The overall checksum for the plain version of the file (optional).
      */
-    @Column(name="OriginalChecksum")
+    @Column(name="`OriginalChecksum`")
     private byte[] originalChecksum;
     
     /**
      * Checksum of all parts of the encrypted file.
      */
-    @Column(name="EncryptedChecksum")
+    @Column(name="`EncryptedChecksum`")
     private byte[] encryptedChecksum;
 
 

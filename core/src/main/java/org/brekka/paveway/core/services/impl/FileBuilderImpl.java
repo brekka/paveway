@@ -9,18 +9,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.crypto.SecretKey;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
-import org.brekka.paveway.core.model.AllocatedFile;
+import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.ResourceCryptoService;
@@ -30,10 +27,6 @@ import org.brekka.phoenix.CryptoFactory;
 
 class FileBuilderImpl implements FileBuilder {
     
-    private final String fileName;
-    
-    private final String mimeType;
-    
     private final ResourceCryptoService resourceCryptoService;
     
     private final ResourceStorageService resourceStorageService;
@@ -41,8 +34,6 @@ class FileBuilderImpl implements FileBuilder {
     private final CryptedFile cryptedFile;
     
     private final CryptoFactory cryptoFactory;
-    
-    private final SecretKey secretKey;
     
     private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
     
@@ -55,8 +46,6 @@ class FileBuilderImpl implements FileBuilder {
     
     public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
             ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService, UploadPolicy policy) {
-        this.fileName = fileName;
-        this.mimeType = mimeType;
         this.resourceCryptoService = resourceCryptoService;
         this.resourceStorageService = resourceStorageService;
         this.cryptoFactory = cryptoFactory;
@@ -64,8 +53,10 @@ class FileBuilderImpl implements FileBuilder {
         cryptedFile.setParts(new ArrayList<CryptedPart>());
         cryptedFile.setCompression(compression);
         cryptedFile.setProfile(cryptoFactory.getProfileId());
+        cryptedFile.setFileName(fileName);
+        cryptedFile.setMimeType(mimeType);
+        cryptedFile.setSecretKey(cryptoFactory.getSymmetric().getKeyGenerator().generateKey());
         this.cryptedFile = cryptedFile;
-        this.secretKey = cryptoFactory.getSymmetric().getKeyGenerator().generateKey();
         this.policy = policy;
     }
     
@@ -81,7 +72,7 @@ class FileBuilderImpl implements FileBuilder {
      * @return the fileName
      */
     public String getFileName() {
-        return fileName;
+        return cryptedFile.getFileName();
     }
 
     /* (non-Javadoc)
@@ -98,7 +89,8 @@ class FileBuilderImpl implements FileBuilder {
         part.setFile(cryptedFile);
         cryptedFile.getParts().add(part);
         ByteSequence partDestination = resourceStorageService.allocate(partId);
-        ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
+        ResourceEncryptor encryptor = resourceCryptoService.encryptor(
+                cryptedFile.getSecretKey(), cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
         PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, 
                 digestInstance, partDestination, uploadedBytesCount);
@@ -129,10 +121,6 @@ class FileBuilderImpl implements FileBuilder {
         return complete;
     }
     
-    public AllocatedFile getAllocatedFile() {
-        return new AllocatedFileImpl(fileName, mimeType, cryptedFile, secretKey);
-    }
-    
     /**
      * @return the cryptedFile
      */
@@ -159,8 +147,8 @@ class FileBuilderImpl implements FileBuilder {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-            .append("fileName", fileName)
-            .append("mimeType", mimeType)
+            .append("fileName", cryptedFile.getFileName())
+            .append("mimeType", cryptedFile.getMimeType())
             .toString();
     }
 }

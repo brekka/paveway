@@ -18,7 +18,7 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
 import org.brekka.paveway.core.dao.CryptedPartDAO;
-import org.brekka.paveway.core.model.AllocatedFile;
+import org.brekka.paveway.core.model.Bundle;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
@@ -74,34 +74,18 @@ public class PavewayServiceImpl implements PavewayService {
     
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public AllocatedFile complete(FileBuilder fileBuilder) {
+    public CryptedFile complete(Bundle bundle, FileBuilder fileBuilder) {
         FileBuilderImpl fileBuilderImpl = narrow(fileBuilder);
-        AllocatedFile allocatedFile = fileBuilderImpl.getAllocatedFile();
-        CryptedFile cryptedFile = allocatedFile.getCryptedFile();
+        CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
+        cryptedFile.setBundle(bundle);
         List<CryptedPart> parts = cryptedFile.getParts();
         for (CryptedPart cryptedPart : parts) {
             cryptedPartDAO.create(cryptedPart);
         }
         cryptedFileDAO.create(cryptedFile);
-        return allocatedFile;
+        bundle.getFiles().put(cryptedFile.getId(), cryptedFile);
+        return cryptedFile;
     }
-    
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.services.PavewayService#remove(org.brekka.paveway.core.model.CryptedFile)
-     */
-    @Override
-    @Transactional(propagation=Propagation.REQUIRED)
-    public void remove(UUID cryptedFileId) {
-        CryptedFile cryptedFile = cryptedFileDAO.retrieveById(cryptedFileId);
-        List<CryptedPart> parts = cryptedFile.getParts();
-        for (CryptedPart cryptedPart : parts) {
-            UUID partId = cryptedPart.getId();
-            resourceStorageService.remove(partId);
-            cryptedPartDAO.delete(partId);
-        }
-        cryptedFileDAO.delete(cryptedFileId);
-    }
-
     
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.services.PavewayService#retrieveCryptedFileById(java.util.UUID)

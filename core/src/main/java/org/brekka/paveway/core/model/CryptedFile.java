@@ -2,22 +2,26 @@ package org.brekka.paveway.core.model;
 
 import java.util.List;
 
+import javax.crypto.SecretKey;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.brekka.commons.persistence.model.IdentifiableEntity;
+import org.brekka.paveway.core.PavewayConstants;
 
 /**
  * 
- * @author Andrew Taylor
+ * @author Andrew Taylor (andrew@brekka.org)
  */
 @Entity
-@Table(name="\"CryptedFile\"")
+@Table(name="`CryptedFile`", schema=PavewayConstants.SCHEMA)
 public class CryptedFile extends IdentifiableEntity {
     
     /**
@@ -28,45 +32,64 @@ public class CryptedFile extends IdentifiableEntity {
     /**
      * Identifies what compression mechanism is in use for this file, which will apply to all parts.
      */
-    @Column(name="Compression", length=12)
+    @Column(name="`Compression`", length=12)
     @Enumerated(EnumType.STRING)
     private Compression compression;
     
     /**
      * Crypto profile used for this file
      */
-    @Column(name="Profile")
+    @Column(name="`Profile`")
     private int profile;
     
     /**
      * Overall length of the original file
      */
-    @Column(name="OriginalLength")
+    @Column(name="`OriginalLength`")
     private long originalLength;
     
     /**
      * The overall checksum for the plain version of the file (optional).
      */
-    @Column(name="OriginalChecksum")
+    @Column(name="`OriginalChecksum`")
     private byte[] originalChecksum;
     
     /**
      * Length of the compressed/encrypted file.
      */
-    @Column(name="EncryptedLength")
+    @Column(name="`EncryptedLength`")
     private long encryptedLength;
     
     /**
      * Checksum of all parts of the encrypted file.
      */
-    @Column(name="EncryptedChecksum")
+    @Column(name="`EncryptedChecksum`")
     private byte[] encryptedChecksum;
+    
+    /**
+     * The bundle this belongs to.
+     */
+    @ManyToOne
+    @JoinColumn(name="`BundleID`", nullable=false)
+    private Bundle bundle;
     
     /**
      * The list of parts that make up this file
      */
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="file")
+    @OneToMany(mappedBy="file")
     private List<CryptedPart> parts;
+    
+    /**
+     * The secret key
+     */
+    @Transient
+    private transient SecretKey secretKey;
+    
+    @Transient
+    private transient String fileName;
+    
+    @Transient
+    private transient String mimeType;
 
     
     public Compression getCompression() {
@@ -123,5 +146,37 @@ public class CryptedFile extends IdentifiableEntity {
 
     public void setParts(List<CryptedPart> parts) {
         this.parts = parts;
+    }
+
+    public Bundle getBundle() {
+        return bundle;
+    }
+
+    public void setBundle(Bundle bundle) {
+        this.bundle = bundle;
+    }
+
+    public SecretKey getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(SecretKey secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
     }
 }

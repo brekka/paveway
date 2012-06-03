@@ -8,18 +8,22 @@ import java.util.UUID;
 
 import org.brekka.commons.persistence.dao.EntityDAO;
 import org.brekka.paveway.core.model.Bundle;
-import org.brekka.paveway.core.model.CryptedFile;
 
 /**
  * @author Andrew Taylor
  *
  */
-public interface CryptedFileDAO extends EntityDAO<UUID, CryptedFile> {
+public interface BundleDAO extends EntityDAO<UUID, Bundle> {
+
+    /**
+     * @param maxBundleCount
+     * @return
+     */
+    List<Bundle> retrieveOldestExpired(int maxBundleCount);
 
     /**
      * @param bundle
-     * @return
      */
-    List<CryptedFile> retrieveByBundle(Bundle bundle);
+    void refresh(Bundle bundle);
 
 }
