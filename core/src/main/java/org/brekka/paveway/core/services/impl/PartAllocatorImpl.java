@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.output.CountingOutputStream;
 import org.brekka.paveway.core.model.ByteSequence;
@@ -31,15 +32,19 @@ public class PartAllocatorImpl implements PartAllocator {
      */
     private final ByteSequence partDestination;
     
+    private final AtomicLong uploadedBytesCount;
+    
     private CountingOutputStream counter;
     
     
     
-    public PartAllocatorImpl(ResourceEncryptor resourceEncryptor, CryptedPart cryptedPart, MessageDigest messageDigest, ByteSequence partDestination) {
+    public PartAllocatorImpl(ResourceEncryptor resourceEncryptor, CryptedPart cryptedPart, 
+            MessageDigest messageDigest, ByteSequence partDestination, AtomicLong uploadedBytesCount) {
         this.resourceEncryptor = resourceEncryptor;
         this.cryptedPart = cryptedPart;
         this.messageDigest = messageDigest;
         this.partDestination = partDestination;
+        this.uploadedBytesCount = uploadedBytesCount;
     }
 
     /* (non-Javadoc)
@@ -63,6 +68,7 @@ public class PartAllocatorImpl implements PartAllocator {
         cryptedPart.setEncryptedChecksum(resourceEncryptor.getChecksum());
         cryptedPart.setLength(counter.getByteCount());
         cryptedPart.setOffset(offset);
+        uploadedBytesCount.addAndGet(counter.getByteCount());
     }
     
     /*

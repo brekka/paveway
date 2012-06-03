@@ -23,6 +23,7 @@ import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
+import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.PavewayService;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceStorageService;
@@ -60,7 +61,7 @@ public class PavewayServiceImpl implements PavewayService {
      * @see org.brekka.paveway.core.services.PavewayService#begin(java.lang.String)
      */
     @Override
-    public FileBuilder begin(String fileName, String mimeType) {
+    public FileBuilder begin(String fileName, String mimeType, UploadPolicy uploadPolicy) {
         Compression compression = Compression.NONE;
         // TODO more mime types that can be compressed
         if (mimeType.startsWith("text")) {
@@ -68,7 +69,7 @@ public class PavewayServiceImpl implements PavewayService {
         }
         CryptoFactory defaultFactory = cryptoFactoryRegistry.getDefault();
         return new FileBuilderImpl(fileName, mimeType, compression, defaultFactory, 
-                resourceCryptoService, resourceStorageService);
+                resourceCryptoService, resourceStorageService, uploadPolicy);
     }
     
     @Override

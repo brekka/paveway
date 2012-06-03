@@ -17,6 +17,8 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
+import org.brekka.paveway.core.model.FilesContext;
+import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
 import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
@@ -32,36 +34,38 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      */
     private static final long serialVersionUID = 4985042386032649934L;
     
-    private EncryptedFileItemFactory defaultFileItemFactory;
-    
-    /* (non-Javadoc)
-     * @see javax.servlet.GenericServlet#init(javax.servlet.ServletConfig)
-     */
-    @Override
-    public void init() throws ServletException {
-        super.init();
-        defaultFileItemFactory = new EncryptedFileItemFactory(0, null, getPavewayService());
-    }
-    
     /* (non-Javadoc)
      * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        FilesContext filesContext = getFilesContext(req);
         
         String xFileName = req.getHeader("X-File-Name");
         String xFileType = req.getHeader("X-File-Type");
         
-        FileItemFactory factory = defaultFileItemFactory;
-        if (xFileName != null 
-                && xFileType != null) {
-            // Special factory
-            factory = multipartFactory(req, xFileName, xFileType);
+        FileItemFactory factory;
+        try {
+            if (xFileName != null 
+                    && xFileType != null) {
+                // Special factory
+                factory = multipartFactory(filesContext, xFileName, xFileType);
+            } else {
+                factory = new EncryptedFileItemFactory(0, null, getPavewayService(), filesContext.getPolicy());
+            }
+        } catch (PavewayException e) {
+            if (e.getErrorCode() == PavewayErrorCode.PW700) {
+                // Too many files
+                resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
+                return;
+            } else {
+                throw e;
+            }
         }
 
         // Parse the request
         try {
-            handle(factory, req, resp);
+            handle(factory, filesContext, req, resp);
             resp.setStatus(HttpServletResponse.SC_OK);
         } catch (FileUploadException e) {
             throw new PavewayException(PavewayErrorCode.PW800, e, "");
@@ -71,16 +75,20 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
     
 
     /**
-     * @param req
      * @param xFileName
      * @param xFileType
      * @return
      */
-    protected FileItemFactory multipartFactory(HttpServletRequest req, String xFileName, String xFileType) {
-        FileBuilder fileBuilder = retrieveFileBuilder(req, xFileName);
+    protected FileItemFactory multipartFactory(FilesContext filesContext, String xFileName, String xFileType) {
+        FileBuilder fileBuilder = filesContext.retrieve(xFileName);
         if (fileBuilder == null) {
-            fileBuilder = getPavewayService().begin(xFileName, xFileType);
-            retainFileBuilder(req, xFileName, fileBuilder);
+            // Allocate a new file
+            if (filesContext.isFileSlotAvailable()) {
+                fileBuilder = getPavewayService().begin(xFileName, xFileType, filesContext.getPolicy());
+                filesContext.retain(xFileName, fileBuilder);
+            } else {
+                throw new PavewayException(PavewayErrorCode.PW700, "Unable to add any more files to this maker");
+            }
         }
         return new EncryptedMultipartFileItemFactory(0, null, xFileName, xFileType, fileBuilder);
     }
@@ -93,28 +101,26 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @param upload 
      * 
      */
-    private void handle(FileItemFactory factory, HttpServletRequest req, HttpServletResponse resp) throws FileUploadException {
+    private void handle(FileItemFactory factory, FilesContext filesContext, HttpServletRequest req, HttpServletResponse resp) 
+                throws FileUploadException, IOException {
+        UploadPolicy policy = filesContext.getPolicy();
         // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);
+        upload.setFileSizeMax(policy.getMaxFileSize());
         
         @SuppressWarnings("unchecked")
         List<FileItem> items = upload.parseRequest(req);
-        
         for (FileItem fileItem : items) {
             if (fileItem instanceof EncryptedFileItem) {
                 EncryptedFileItem efi = (EncryptedFileItem) fileItem;
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    completeFileBuilder(req, fileBuilder);
+                    filesContext.complete(fileBuilder);
                 }
             }
         }
     }
     
-    protected abstract void retainFileBuilder(HttpServletRequest req, String fileName, FileBuilder fileBuilder);
-    
-    protected abstract FileBuilder retrieveFileBuilder(HttpServletRequest req, String fileName);
-    
-    protected abstract void completeFileBuilder(HttpServletRequest req, FileBuilder fileBuilder);
+    protected abstract FilesContext getFilesContext(HttpServletRequest req);
 }

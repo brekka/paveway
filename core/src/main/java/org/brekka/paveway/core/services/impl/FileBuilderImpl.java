@@ -7,11 +7,14 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.crypto.SecretKey;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.brekka.paveway.core.PavewayErrorCode;
+import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.AllocatedFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
@@ -19,6 +22,7 @@ import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.PartAllocator;
+import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceEncryptor;
 import org.brekka.paveway.core.services.ResourceStorageService;
@@ -42,8 +46,15 @@ class FileBuilderImpl implements FileBuilder {
     
     private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
     
+    /**
+     * Length of parts so far
+     */
+    private final AtomicLong uploadedBytesCount = new AtomicLong();
+    
+    private final UploadPolicy policy;
+    
     public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
-            ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService) {
+            ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService, UploadPolicy policy) {
         this.fileName = fileName;
         this.mimeType = mimeType;
         this.resourceCryptoService = resourceCryptoService;
@@ -55,6 +66,7 @@ class FileBuilderImpl implements FileBuilder {
         cryptedFile.setProfile(cryptoFactory.getProfileId());
         this.cryptedFile = cryptedFile;
         this.secretKey = cryptoFactory.getSymmetric().getKeyGenerator().generateKey();
+        this.policy = policy;
     }
     
     public void setLength(long length) {
@@ -77,6 +89,9 @@ class FileBuilderImpl implements FileBuilder {
      */
     @Override
     public PartAllocator allocatePart() {
+        if (uploadedBytesCount.longValue() >= policy.getMaxFileSize()) {
+            throw new PavewayException(PavewayErrorCode.PW700, "File has grown too large");
+        }
         CryptedPart part = new CryptedPart();
         UUID partId = UUID.randomUUID();
         part.setId(partId);
@@ -85,7 +100,8 @@ class FileBuilderImpl implements FileBuilder {
         ByteSequence partDestination = resourceStorageService.allocate(partId);
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(secretKey, cryptedFile.getCompression());
         MessageDigest digestInstance = cryptoFactory.getDigestInstance();
-        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, digestInstance, partDestination);
+        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, 
+                digestInstance, partDestination, uploadedBytesCount);
         partAllocators.add(partAllocatorImpl);
         return partAllocatorImpl;
     }
