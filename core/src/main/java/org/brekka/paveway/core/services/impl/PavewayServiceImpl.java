@@ -18,7 +18,6 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
 import org.brekka.paveway.core.dao.CryptedPartDAO;
-import org.brekka.paveway.core.model.Bundle;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
@@ -74,17 +73,30 @@ public class PavewayServiceImpl implements PavewayService {
     
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public CryptedFile complete(Bundle bundle, FileBuilder fileBuilder) {
+    public CryptedFile complete(FileBuilder fileBuilder) {
         FileBuilderImpl fileBuilderImpl = narrow(fileBuilder);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
-        cryptedFile.setBundle(bundle);
         List<CryptedPart> parts = cryptedFile.getParts();
         for (CryptedPart cryptedPart : parts) {
             cryptedPartDAO.create(cryptedPart);
         }
         cryptedFileDAO.create(cryptedFile);
-        bundle.getFiles().put(cryptedFile.getId(), cryptedFile);
         return cryptedFile;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.services.PavewayService#removeFile(java.util.UUID)
+     */
+    @Override
+    @Transactional(propagation=Propagation.REQUIRED)
+    public void removeFile(UUID cryptedFileId) {
+        CryptedFile cryptedFile = cryptedFileDAO.retrieveById(cryptedFileId);
+        List<CryptedPart> parts = cryptedFile.getParts();
+        for (CryptedPart part : parts) {
+            cryptedPartDAO.delete(part.getId());
+            resourceStorageService.remove(part.getId());
+        }
+        cryptedFileDAO.delete(cryptedFileId);
     }
     
     /* (non-Javadoc)

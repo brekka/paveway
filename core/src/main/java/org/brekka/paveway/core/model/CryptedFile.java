@@ -7,8 +7,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -65,13 +63,6 @@ public class CryptedFile extends IdentifiableEntity {
      */
     @Column(name="`EncryptedChecksum`")
     private byte[] encryptedChecksum;
-    
-    /**
-     * The bundle this belongs to.
-     */
-    @ManyToOne
-    @JoinColumn(name="`BundleID`", nullable=false)
-    private Bundle bundle;
     
     /**
      * The list of parts that make up this file
@@ -146,14 +137,6 @@ public class CryptedFile extends IdentifiableEntity {
 
     public void setParts(List<CryptedPart> parts) {
         this.parts = parts;
-    }
-
-    public Bundle getBundle() {
-        return bundle;
-    }
-
-    public void setBundle(Bundle bundle) {
-        this.bundle = bundle;
     }
 
     public SecretKey getSecretKey() {
