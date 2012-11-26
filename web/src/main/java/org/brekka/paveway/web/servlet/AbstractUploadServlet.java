@@ -58,9 +58,8 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
                 // Too many files
                 resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
                 return;
-            } else {
-                throw e;
             }
+            throw e;
         }
 
         // Parse the request
@@ -101,8 +100,8 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
      * @param upload 
      * 
      */
-    private void handle(FileItemFactory factory, FilesContext filesContext, HttpServletRequest req, HttpServletResponse resp) 
-                throws FileUploadException, IOException {
+    private static void handle(FileItemFactory factory, FilesContext filesContext, HttpServletRequest req, HttpServletResponse resp) 
+                throws FileUploadException {
         UploadPolicy policy = filesContext.getPolicy();
         // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);

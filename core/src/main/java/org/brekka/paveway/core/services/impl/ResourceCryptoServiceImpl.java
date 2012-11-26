@@ -3,27 +3,20 @@ package org.brekka.paveway.core.services.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.DigestOutputStream;
-import java.security.GeneralSecurityException;
-import java.security.Key;
-import java.security.MessageDigest;
-import java.security.spec.AlgorithmParameterSpec;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceEncryptor;
-import org.brekka.phoenix.CryptoFactory;
-import org.brekka.phoenix.CryptoFactoryRegistry;
+import org.brekka.phoenix.api.DigestResult;
+import org.brekka.phoenix.api.SecretKey;
+import org.brekka.phoenix.api.StreamCryptor;
+import org.brekka.phoenix.api.SymmetricCryptoSpec;
+import org.brekka.phoenix.api.services.DigestCryptoService;
+import org.brekka.phoenix.api.services.SymmetricCryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,71 +24,83 @@ import org.springframework.stereotype.Service;
 public class ResourceCryptoServiceImpl implements ResourceCryptoService {
 
     @Autowired
-    private CryptoFactoryRegistry cryptoFactoryRegistry;
+    private SymmetricCryptoService symmetricCryptoService;
+    
+    @Autowired
+    private DigestCryptoService digestCryptoService;
     
     @Override
     public ResourceEncryptor encryptor(SecretKey secretKey, Compression compression) {
-        CryptoFactory factory = cryptoFactoryRegistry.getDefault();
-        return new ResourceEncryptorImpl(factory, secretKey, compression);
+        StreamCryptor<OutputStream, SymmetricCryptoSpec> symCryptor = symmetricCryptoService.encryptor(secretKey);
+        StreamCryptor<OutputStream, DigestResult> digestCryptor = digestCryptoService.outputDigester(secretKey.getCryptoProfile());
+        return new ResourceEncryptorImpl(symCryptor, digestCryptor, compression);
     }
-    
     
     
     @Override
-    public InputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream inputStream) {
-        CryptoFactory cryptoFactory = cryptoFactoryRegistry.getFactory(cryptoProfileId);
-        Cipher cipher = getCipher(Cipher.DECRYPT_MODE, secretKey, iv, cryptoFactory.getSymmetric());
-        InputStream cipherOutputStream = new CipherInputStream(inputStream, cipher);
-        InputStream is;
-        switch (compression) {
-            case GZIP:
-                try {
-                    is = new GZIPInputStream(cipherOutputStream);
-                } catch (IOException e) {
-                    // TODO
-                    throw new PavewayException(PavewayErrorCode.PW400, e, 
-                            "GZip problem");
-                }
-                break;
-                
-            default:
-                is = cipherOutputStream;
-                break;
-        }
-        return is;
-    }
-
-    
-    protected IvParameterSpec generateInitializationVector(CryptoFactory profile) {
-        byte[] ivBytes = new byte[profile.getSymmetric().getIvLength()];
-        profile.getSecureRandom().nextBytes(ivBytes);
-        IvParameterSpec iv = new IvParameterSpec(ivBytes);
-        return iv;
+    public StreamCryptor<InputStream, SymmetricCryptoSpec> decryptor(SymmetricCryptoSpec spec, Compression compression) {
+        StreamCryptor<InputStream, SymmetricCryptoSpec> symDecryptor = symmetricCryptoService.decryptor(spec);
+        return new ResourceDecryptorImpl(symDecryptor, compression);
     }
     
-    protected Cipher getCipher(int mode, Key key, AlgorithmParameterSpec parameter, CryptoFactory.Symmetric symmetricProfile) {
-        Cipher cipher = symmetricProfile.getInstance();
-        try {
-            cipher.init(mode, key, parameter);
-        } catch (GeneralSecurityException e) {
-            throw new PavewayException(PavewayErrorCode.PW200, e, 
-                    "Problem initializing symmetric cipher");
+    private class ResourceDecryptorImpl implements StreamCryptor<InputStream, SymmetricCryptoSpec> {
+        private final StreamCryptor<InputStream, SymmetricCryptoSpec> symDecryptor;
+        private final Compression compression;
+        /**
+         * @param symDecryptor
+         * @param compression
+         */
+        public ResourceDecryptorImpl(StreamCryptor<InputStream, SymmetricCryptoSpec> symDecryptor,
+                Compression compression) {
+            this.symDecryptor = symDecryptor;
+            this.compression = compression;
         }
-        return cipher;
+        
+        /* (non-Javadoc)
+         * @see org.brekka.phoenix.api.StreamCryptor#getStream(java.lang.Object)
+         */
+        @Override
+        public InputStream getStream(InputStream stream) {
+            InputStream cipherOutputStream = symDecryptor.getStream(stream);
+            InputStream is;
+            switch (compression) {
+                case GZIP:
+                    try {
+                        is = new GZIPInputStream(cipherOutputStream);
+                    } catch (IOException e) {
+                        // TODO
+                        throw new PavewayException(PavewayErrorCode.PW400, e, 
+                                "GZip problem");
+                    }
+                    break;
+                case NONE:
+                default:
+                    is = cipherOutputStream;
+                    break;
+            }
+            return is;
+        }
+        
+        /* (non-Javadoc)
+         * @see org.brekka.phoenix.api.StreamCryptor#getSpec()
+         */
+        @Override
+        public SymmetricCryptoSpec getSpec() {
+            return symDecryptor.getSpec();
+        }
+        
     }
     
     private class ResourceEncryptorImpl implements ResourceEncryptor {
         
-        private final IvParameterSpec initializationVector;
-        private final Cipher cipher;
-        private final MessageDigest messageDigest;
+        private final StreamCryptor<OutputStream, SymmetricCryptoSpec> symCryptor;
+        private final StreamCryptor<OutputStream, DigestResult> digestCryptor;
         private final Compression compression;
         
-        public ResourceEncryptorImpl(CryptoFactory factory, SecretKey secretKey, Compression compression) {
-            CryptoFactory.Symmetric synchronousFactory = factory.getSymmetric();
-            this.initializationVector = generateInitializationVector(factory);
-            this.cipher = getCipher(Cipher.ENCRYPT_MODE, secretKey, initializationVector, synchronousFactory);
-            this.messageDigest = factory.getDigestInstance();
+        public ResourceEncryptorImpl(StreamCryptor<OutputStream, SymmetricCryptoSpec> symCryptor,
+                StreamCryptor<OutputStream, DigestResult> digestCryptor, Compression compression) {
+            this.symCryptor = symCryptor;
+            this.digestCryptor = digestCryptor;
             this.compression = compression;
         }
         
@@ -105,8 +110,8 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
          */
         @Override
         public OutputStream encrypt(OutputStream finalOs) {
-            DigestOutputStream dos = new DigestOutputStream(finalOs, messageDigest);
-            CipherOutputStream cos = new CipherOutputStream(dos, cipher);
+            OutputStream dos = digestCryptor.getStream(finalOs);
+            OutputStream cos = symCryptor.getStream(dos);
             OutputStream os;
             switch (compression) {
                 case GZIP:
@@ -117,6 +122,7 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
                                 "Failed to create GZIP instance for encryption stream");
                     }
                     break;
+                case NONE:
                 default:
                     // None;
                     os = cos;
@@ -126,19 +132,19 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
         }
         
         /* (non-Javadoc)
-         * @see org.brekka.paveway.core.services.ResourceEncryptor#getChecksum()
+         * @see org.brekka.paveway.core.services.ResourceEncryptor#getDigestResult()
          */
         @Override
-        public byte[] getChecksum() {
-            return messageDigest.digest();
+        public DigestResult getDigestResult() {
+            return digestCryptor.getSpec();
         }
         
         /* (non-Javadoc)
-         * @see org.brekka.paveway.core.services.ResourceEncryptor#getIV()
+         * @see org.brekka.paveway.core.services.ResourceEncryptor#getSpec()
          */
         @Override
-        public IvParameterSpec getIV() {
-            return initializationVector;
+        public SymmetricCryptoSpec getSpec() {
+            return symCryptor.getSpec();
         }
     }
 }

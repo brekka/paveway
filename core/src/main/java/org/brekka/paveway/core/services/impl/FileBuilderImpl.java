@@ -3,7 +3,7 @@
  */
 package org.brekka.paveway.core.services.impl;
 
-import java.security.MessageDigest;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -14,7 +14,6 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.ByteSequence;
-import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
@@ -23,7 +22,10 @@ import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceEncryptor;
 import org.brekka.paveway.core.services.ResourceStorageService;
-import org.brekka.phoenix.CryptoFactory;
+import org.brekka.phoenix.api.CryptoProfile;
+import org.brekka.phoenix.api.DigestResult;
+import org.brekka.phoenix.api.StreamCryptor;
+import org.brekka.phoenix.api.services.DigestCryptoService;
 
 class FileBuilderImpl implements FileBuilder {
     
@@ -31,9 +33,11 @@ class FileBuilderImpl implements FileBuilder {
     
     private final ResourceStorageService resourceStorageService;
     
+    private final DigestCryptoService digestCryptoService;
+    
     private final CryptedFile cryptedFile;
     
-    private final CryptoFactory cryptoFactory;
+    private final CryptoProfile cryptoProfile;
     
     private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
     
@@ -44,18 +48,12 @@ class FileBuilderImpl implements FileBuilder {
     
     private final UploadPolicy policy;
     
-    public FileBuilderImpl(String fileName, String mimeType, Compression compression, CryptoFactory cryptoFactory, 
+    public FileBuilderImpl(CryptedFile cryptedFile, CryptoProfile cryptoProfile, DigestCryptoService digestCryptoService,
             ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService, UploadPolicy policy) {
+        this.digestCryptoService = digestCryptoService;
         this.resourceCryptoService = resourceCryptoService;
         this.resourceStorageService = resourceStorageService;
-        this.cryptoFactory = cryptoFactory;
-        CryptedFile cryptedFile = new CryptedFile();
-        cryptedFile.setParts(new ArrayList<CryptedPart>());
-        cryptedFile.setCompression(compression);
-        cryptedFile.setProfile(cryptoFactory.getProfileId());
-        cryptedFile.setFileName(fileName);
-        cryptedFile.setMimeType(mimeType);
-        cryptedFile.setSecretKey(cryptoFactory.getSymmetric().getKeyGenerator().generateKey());
+        this.cryptoProfile = cryptoProfile;
         this.cryptedFile = cryptedFile;
         this.policy = policy;
     }
@@ -91,9 +89,9 @@ class FileBuilderImpl implements FileBuilder {
         ByteSequence partDestination = resourceStorageService.allocate(partId);
         ResourceEncryptor encryptor = resourceCryptoService.encryptor(
                 cryptedFile.getSecretKey(), cryptedFile.getCompression());
-        MessageDigest digestInstance = cryptoFactory.getDigestInstance();
+        StreamCryptor<OutputStream, DigestResult> digester = digestCryptoService.outputDigester(cryptoProfile);
         PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, 
-                digestInstance, partDestination, uploadedBytesCount);
+                digester, partDestination, uploadedBytesCount);
         partAllocators.add(partAllocatorImpl);
         return partAllocatorImpl;
     }

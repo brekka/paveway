@@ -3,7 +3,9 @@
  */
 package org.brekka.paveway.core.dao.hibernate;
 
-import org.brekka.commons.persistence.dao.impl.AbstractIdentifiableEntityHibernateDAO;
+import java.util.UUID;
+
+import org.brekka.commons.persistence.dao.hibernate.AbstractUniversallyIdentifiableEntityHibernateDAO;
 import org.brekka.commons.persistence.model.IdentifiableEntity;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -13,8 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Andrew Taylor
  *
  */
-public abstract class AbstractPavewayHibernateDAO<Entity extends IdentifiableEntity> extends AbstractIdentifiableEntityHibernateDAO<Entity>  {
-
+public abstract class AbstractPavewayHibernateDAO<T extends IdentifiableEntity<UUID>> 
+extends AbstractUniversallyIdentifiableEntityHibernateDAO<T>{
 
     @Autowired
     private SessionFactory pavewaySessionFactory;

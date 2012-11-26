@@ -1,13 +1,20 @@
 package org.brekka.paveway.core.model;
 
+import java.util.UUID;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.brekka.commons.persistence.model.IdentifiableEntity;
 import org.brekka.paveway.core.PavewayConstants;
+import org.brekka.phoenix.api.CryptoProfile;
+import org.brekka.phoenix.api.SecretKey;
+import org.brekka.phoenix.api.SymmetricCryptoSpec;
+import org.hibernate.annotations.Type;
 
 /**
  * 
@@ -15,14 +22,18 @@ import org.brekka.paveway.core.PavewayConstants;
  */
 @Entity
 @Table(name="`CryptedPart`", schema=PavewayConstants.SCHEMA)
-public class CryptedPart extends IdentifiableEntity {
+public class CryptedPart implements IdentifiableEntity<UUID>, SymmetricCryptoSpec {
     
     /**
      * Serial UID
      */
     private static final long serialVersionUID = 2051914235987306665L;
     
-
+    @Id
+    @Type(type="pg-uuid")
+    @Column(name="ID")
+    private UUID id;
+    
     /**
      * The file that 'this' is a part of.
      */
@@ -109,5 +120,35 @@ public class CryptedPart extends IdentifiableEntity {
         this.encryptedChecksum = encryptedChecksum;
     }
     
+
+    public final UUID getId() {
+        return id;
+    }
+
+    public final void setId(UUID id) {
+        this.id = id;
+    }
     
+    /* (non-Javadoc)
+     * @see org.brekka.phoenix.api.SymmetricCryptoSpec#getIV()
+     */
+    @Override
+    public byte[] getIV() {
+        return iv;
+    }
+    /* (non-Javadoc)
+     * @see org.brekka.phoenix.api.SymmetricCryptoSpec#getKey()
+     */
+    @Override
+    public SecretKey getSecretKey() {
+        return getFile().getSecretKey();
+    }
+    
+    /* (non-Javadoc)
+     * @see org.brekka.phoenix.api.CryptoSpec#getProfile()
+     */
+    @Override
+    public CryptoProfile getCryptoProfile() {
+        return CryptoProfile.Static.of(getFile().getProfile());
+    }
 }

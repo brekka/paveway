@@ -1,18 +1,21 @@
 package org.brekka.paveway.core.model;
 
 import java.util.List;
+import java.util.UUID;
 
-import javax.crypto.SecretKey;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.brekka.commons.persistence.model.IdentifiableEntity;
 import org.brekka.paveway.core.PavewayConstants;
+import org.brekka.phoenix.api.SecretKey;
+import org.hibernate.annotations.Type;
 
 /**
  * 
@@ -20,12 +23,17 @@ import org.brekka.paveway.core.PavewayConstants;
  */
 @Entity
 @Table(name="`CryptedFile`", schema=PavewayConstants.SCHEMA)
-public class CryptedFile extends IdentifiableEntity {
+public class CryptedFile implements IdentifiableEntity<UUID> {
     
     /**
      * Serial UID
      */
     private static final long serialVersionUID = 7742347795078233786L;
+    
+    @Id
+    @Type(type="pg-uuid")
+    @Column(name="ID")
+    private UUID id;
 
     /**
      * Identifies what compression mechanism is in use for this file, which will apply to all parts.
@@ -161,5 +169,13 @@ public class CryptedFile extends IdentifiableEntity {
 
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
+    }
+
+    public final UUID getId() {
+        return id;
+    }
+
+    public final void setId(UUID id) {
+        this.id = id;
     }
 }

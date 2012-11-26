@@ -9,19 +9,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-
 import org.apache.commons.io.IOUtils;
 import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceStorageService;
+import org.brekka.phoenix.api.StreamCryptor;
+import org.brekka.phoenix.api.SymmetricCryptoSpec;
 
 class MultipartInputStream extends InputStream {
     
-    private final SecretKey secretKey;
     private final CryptedFile cryptedFile;
     private final Iterator<CryptedPart> partsIterator;
     
@@ -30,9 +28,8 @@ class MultipartInputStream extends InputStream {
     
     private InputStream current = null;
     
-    public MultipartInputStream(CryptedFile cryptedFile, SecretKey secretKey, 
+    public MultipartInputStream(CryptedFile cryptedFile,
             ResourceStorageService resourceStorageService, ResourceCryptoService resourceCryptoService) {
-        this.secretKey = secretKey;
         this.cryptedFile = cryptedFile;
         this.resourceCryptoService = resourceCryptoService;
         this.resourceStorageService = resourceStorageService;
@@ -83,9 +80,9 @@ class MultipartInputStream extends InputStream {
         }
         CryptedPart cryptedPart = partsIterator.next();
         UUID partId = cryptedPart.getId();
-        IvParameterSpec iv = new IvParameterSpec(cryptedPart.getIv());
         ByteSequence byteSequence = resourceStorageService.retrieve(partId);
         InputStream is = byteSequence.getInputStream();
-        this.current = resourceCryptoService.decryptor(cryptedFile.getProfile(), cryptedFile.getCompression(), iv, secretKey, is);
+        StreamCryptor<InputStream, SymmetricCryptoSpec> decryptor = resourceCryptoService.decryptor(cryptedPart, cryptedFile.getCompression());
+        this.current = decryptor.getStream(is);
     }
 }

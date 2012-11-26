@@ -6,8 +6,6 @@ package org.brekka.paveway.core.services;
 import java.io.InputStream;
 import java.util.UUID;
 
-import javax.crypto.SecretKey;
-
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
@@ -24,7 +22,7 @@ public interface PavewayService {
     
     CryptedFile retrieveCryptedFileById(UUID id);
     
-    InputStream download(CryptedFile file, SecretKey secretKey);
+    InputStream download(CryptedFile file);
 
     /**
      * @param cryptedFileId

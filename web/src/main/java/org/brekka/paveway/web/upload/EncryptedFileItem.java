@@ -60,11 +60,11 @@ public class EncryptedFileItem extends AbstractFileItem {
         String xFileName = null;
         if (req != null) {
             xFileName = req.getHeader("X-File-Name");
-        }
-        if (xFileName != null) {
-            long offset = NumberUtils.toLong(req.getHeader("X-Part-Offset"));
-            partAllocator.complete(offset);
-            length = NumberUtils.toLong(req.getHeader("X-File-Size"));
+            if (xFileName != null) {
+                long offset = NumberUtils.toLong(req.getHeader("X-Part-Offset"));
+                partAllocator.complete(offset);
+                length = NumberUtils.toLong(req.getHeader("X-File-Size"));
+            }
         } else {
             partAllocator.complete(0);
             length = partAllocator.getLength();

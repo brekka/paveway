@@ -12,8 +12,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import javax.crypto.SecretKey;
-
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
@@ -26,8 +24,11 @@ import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.PavewayService;
 import org.brekka.paveway.core.services.ResourceCryptoService;
 import org.brekka.paveway.core.services.ResourceStorageService;
-import org.brekka.phoenix.CryptoFactory;
-import org.brekka.phoenix.CryptoFactoryRegistry;
+import org.brekka.phoenix.api.CryptoProfile;
+import org.brekka.phoenix.api.SecretKey;
+import org.brekka.phoenix.api.services.CryptoProfileService;
+import org.brekka.phoenix.api.services.DigestCryptoService;
+import org.brekka.phoenix.api.services.SymmetricCryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -42,7 +43,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class PavewayServiceImpl implements PavewayService {
 
     @Autowired
-    private CryptoFactoryRegistry cryptoFactoryRegistry;
+    private CryptoProfileService cryptoProfileService;
+    
+    @Autowired
+    private SymmetricCryptoService symmetricCryptoService;
+    
+    @Autowired
+    private DigestCryptoService digestCryptoService;
     
     @Autowired
     private ResourceCryptoService resourceCryptoService;
@@ -66,8 +73,18 @@ public class PavewayServiceImpl implements PavewayService {
         if (mimeType.startsWith("text")) {
             compression = Compression.GZIP;
         }
-        CryptoFactory defaultFactory = cryptoFactoryRegistry.getDefault();
-        return new FileBuilderImpl(fileName, mimeType, compression, defaultFactory, 
+        CryptoProfile cryptoProfile = cryptoProfileService.retrieveDefault();
+        
+        CryptedFile cryptedFile = new CryptedFile();
+        cryptedFile.setParts(new ArrayList<CryptedPart>());
+        cryptedFile.setCompression(compression);
+        cryptedFile.setProfile(cryptoProfile.getNumber());
+        cryptedFile.setFileName(fileName);
+        cryptedFile.setMimeType(mimeType);
+        SecretKey secretKey = symmetricCryptoService.createSecretKey(cryptoProfile);
+        cryptedFile.setSecretKey(secretKey);
+        
+        return new FileBuilderImpl(cryptedFile, cryptoProfile, digestCryptoService,
                 resourceCryptoService, resourceStorageService, uploadPolicy);
     }
     
@@ -108,8 +125,8 @@ public class PavewayServiceImpl implements PavewayService {
     }
     
     @Override
-    public InputStream download(CryptedFile cryptedFile, SecretKey secretKey) {
-        return new MultipartInputStream(cryptedFile, secretKey, resourceStorageService, resourceCryptoService);
+    public InputStream download(CryptedFile cryptedFile) {
+        return new MultipartInputStream(cryptedFile, resourceStorageService, resourceCryptoService);
     }
     
     protected FileBuilderImpl narrow(FileBuilder fileBuilder) {

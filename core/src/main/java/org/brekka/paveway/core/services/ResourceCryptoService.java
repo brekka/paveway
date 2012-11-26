@@ -2,14 +2,14 @@ package org.brekka.paveway.core.services;
 
 import java.io.InputStream;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-
 import org.brekka.paveway.core.model.Compression;
+import org.brekka.phoenix.api.SecretKey;
+import org.brekka.phoenix.api.StreamCryptor;
+import org.brekka.phoenix.api.SymmetricCryptoSpec;
 
 public interface ResourceCryptoService {
 
     ResourceEncryptor encryptor(SecretKey secretKey, Compression compression);
 
-    InputStream decryptor(int cryptoProfileId, Compression compression, IvParameterSpec iv, SecretKey secretKey, InputStream is);
+    StreamCryptor<InputStream, SymmetricCryptoSpec> decryptor(SymmetricCryptoSpec spec, Compression compression);
 }

@@ -2,7 +2,8 @@ package org.brekka.paveway.core.services;
 
 import java.io.OutputStream;
 
-import javax.crypto.spec.IvParameterSpec;
+import org.brekka.phoenix.api.DigestResult;
+import org.brekka.phoenix.api.SymmetricCryptoSpec;
 
 public interface ResourceEncryptor {
 
@@ -12,15 +13,7 @@ public interface ResourceEncryptor {
      */
     OutputStream encrypt(OutputStream os);
     
-    /**
-     * The checksum for what was just encrypted
-     * @return
-     */
-    byte[] getChecksum();
+    DigestResult getDigestResult();
     
-    /**
-     * Retrieve the IV
-     * @return
-     */
-    IvParameterSpec getIV();
+    SymmetricCryptoSpec getSpec();
 }
