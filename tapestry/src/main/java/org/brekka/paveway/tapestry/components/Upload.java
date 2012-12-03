@@ -63,7 +63,8 @@ import org.brekka.paveway.web.model.Files;
 import org.brekka.paveway.web.session.UploadsContext;
 
 /**
- * A component to upload a file.
+ * A component to upload files that enhances the default tapestry component with advanced HTML5 multi-file-upload support.
+ * It will still fall back to plain file upload if HTML5 features are unavailable.
  * 
  * @see org.apache.tapestry5.upload.components.Upload
  */
@@ -258,7 +259,7 @@ public class Upload extends AbstractField {
         
         writer.element("div", "id", outerId);
         
-        writer.element("div", "class" , "failsafe-input");
+        writer.element("div", "class" , "pw-failsafe-input");
 
         writer.element("input", "type", "file", "name", getControlName(), "id", getClientId());
         

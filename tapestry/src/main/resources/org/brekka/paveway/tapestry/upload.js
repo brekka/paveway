@@ -6,10 +6,10 @@ var PegasusUpload = {
 		}
 		var inputId = 'fileupload_' + id;
 		var context = $('#' + id);
-		context.find(".failsafe-input").remove();
+		context.find(".pw-failsafe-input").remove();
 		var multiple = (navigator.userAgent.indexOf("Firefox") == -1);
-		context.find('span.add_files').html('<input id="' + inputId + '" type="file" name="files[]" multiple="' + multiple + '" />');
-		context.find('div.multi-upload').removeClass("hidden");
+		context.find('span.pw-add-files').html('<input id="' + inputId + '" type="file" name="files[]" multiple="' + multiple + '" />');
+		context.find('div.pw-upload').removeClass("hidden");
 		var table = context.find('table');
 		if (table.find('tbody tr').size() == 0) {
 			table.hide();
@@ -40,8 +40,8 @@ var PegasusUpload = {
 	        		if (file.size > pMaxFileSize) {
 	        			return false;
 	        		}
-	        		table.find('tbody').append('<tr><td>' + file.name + '</td><td>' + file.size + '</td><td class="progress">0%</td></tr>');
-	        		file.progress = table.find('tr:last .progress');
+	        		table.find('tbody').append('<tr><td>' + file.name + '</td><td>' + file.size + '</td><td class="pw-progress">0%</td></tr>');
+	        		file.progress = table.find('tr:last .pw-progress');
 	        		cnt ++;
 	        		total++;
 	        	}

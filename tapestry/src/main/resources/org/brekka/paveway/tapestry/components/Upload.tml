@@ -2,8 +2,8 @@
       xmlns:t="http://tapestry.apache.org/schema/tapestry_5_3.xsd"
       xmlns:p="tapestry:parameter">
       
-<div class="multi-upload hidden">
-	<span class="add_files"></span>
+<div class="pw-upload hidden">
+	<span class="pw-add-files"></span>
 	<div class="table-outer">
     <table>
         <thead>
