@@ -7,9 +7,9 @@ import java.io.OutputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang3.math.NumberUtils;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
+import org.brekka.paveway.web.support.ContentRange;
 
 /**
  * @author Andrew Taylor
@@ -56,18 +56,18 @@ public class EncryptedFileItem extends AbstractFileItem {
      * @param req does not have to be set
      */
     public FileBuilder complete(HttpServletRequest req) {
-        long length = 0;
-        String xFileName = null;
+        long length;
+        String contentRangeStr = null;
         if (req != null) {
-            xFileName = req.getHeader("X-File-Name");
-            if (xFileName != null) {
-                long offset = NumberUtils.toLong(req.getHeader("X-Part-Offset"));
-                partAllocator.complete(offset);
-                length = NumberUtils.toLong(req.getHeader("X-File-Size"));
-            }
-        } else {
+            contentRangeStr = req.getHeader(ContentRange.HEADER);
+        } 
+        if (contentRangeStr == null) {
             partAllocator.complete(0);
             length = partAllocator.getLength();
+        } else {
+            ContentRange contentRange = ContentRange.valueOf(contentRangeStr);
+            partAllocator.complete(contentRange.getFirstBytePosition());
+            length = contentRange.getLength();
         }
         fileBuilder.setLength(length);
         if (fileBuilder.isComplete()) {

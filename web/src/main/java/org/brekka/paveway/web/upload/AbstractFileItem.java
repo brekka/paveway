@@ -103,7 +103,7 @@ public abstract class AbstractFileItem implements FileItem {
      */
     @Override
     public void delete() {
-        throw new UnsupportedOperationException();
+        // Ignore, handled internally
     }
 
     /* (non-Javadoc)

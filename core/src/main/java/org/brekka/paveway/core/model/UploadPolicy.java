@@ -26,4 +26,10 @@ public interface UploadPolicy {
      * @return
      */
     int getMaxSize();
+    
+    /**
+     * The cluster size
+     * @return
+     */
+    int getClusterSize();
 }

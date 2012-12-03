@@ -19,6 +19,7 @@ import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.FilesContext;
 import org.brekka.paveway.core.model.UploadPolicy;
+import org.brekka.paveway.web.support.ContentDisposition;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
 import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
@@ -41,8 +42,17 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         FilesContext filesContext = getFilesContext(req);
         
-        String xFileName = req.getHeader("X-File-Name");
-        String xFileType = req.getHeader("X-File-Type");
+        String xFileName = null;
+        String contentDispositionStr = req.getHeader(ContentDisposition.HEADER);
+        if (contentDispositionStr != null) {
+            String encoding = req.getCharacterEncoding();
+            if (encoding == null) {
+                encoding = "UTF-8";
+            }
+            ContentDisposition contentDisposition = ContentDisposition.valueOf(contentDispositionStr, encoding);
+            xFileName = contentDisposition.getFilename();
+        }
+        String xFileType = req.getHeader("Content-Description");
         
         FileItemFactory factory;
         try {
