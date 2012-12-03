@@ -14,6 +14,7 @@ import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.lang3.StringUtils;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
@@ -23,12 +24,13 @@ import org.brekka.paveway.web.support.ContentDisposition;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
 import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
+import org.brekka.paveway.web.session.UploadsContext;
 
 /**
  * @author Andrew Taylor
  *
  */
-public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
+public class UploadServlet extends AbstractPavewayServlet {
 
     /**
      * Serial UID
@@ -131,5 +133,12 @@ public abstract class AbstractUploadServlet extends AbstractPavewayServlet {
         }
     }
     
-    protected abstract FilesContext getFilesContext(HttpServletRequest req);
+    protected FilesContext getFilesContext(HttpServletRequest req) {
+        String contextPath = req.getContextPath();
+        String requestURI = req.getRequestURI();
+        requestURI = requestURI.substring(contextPath.length());
+        String makerKey = StringUtils.substringAfterLast(requestURI, "/");
+        UploadsContext bundleMakerContext = UploadsContext.get(req, true);
+        return (FilesContext) bundleMakerContext.get(makerKey);
+    }
 }

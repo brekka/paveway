@@ -24,6 +24,7 @@
 		<module>core</module>
 		<module>schemas</module>
 		<module>web</module>
+		<module>tapestry</module>
 	</modules>
 
 	<properties>
