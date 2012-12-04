@@ -45,6 +45,7 @@ import org.apache.tapestry5.annotations.Property;
 import org.apache.tapestry5.annotations.SetupRender;
 import org.apache.tapestry5.corelib.base.AbstractField;
 import org.apache.tapestry5.corelib.mixins.RenderDisabled;
+import org.apache.tapestry5.ioc.Messages;
 import org.apache.tapestry5.ioc.annotations.Inject;
 import org.apache.tapestry5.services.ComponentDefaultProvider;
 import org.apache.tapestry5.services.FieldValidatorDefaultSource;
@@ -90,13 +91,6 @@ public class Upload extends AbstractField {
      */
     @Parameter(defaultPrefix = BindingConstants.VALIDATE)
     private FieldValidator<Object> validate;
-    
-    @Parameter(defaultPrefix=BindingConstants.LITERAL)
-    private String description;
-    
-    @Property
-    @Parameter(defaultPrefix=BindingConstants.LITERAL)
-    private String multiDescription;
 
     @Property
     protected List<FileInfo> uploadedFiles;
@@ -143,6 +137,9 @@ public class Upload extends AbstractField {
 
     @Environmental
     private JavaScriptSupport javaScriptSupport;
+    
+    @Inject
+    private Messages messages;
 
     
     private String keyControlName;
@@ -165,24 +162,13 @@ public class Upload extends AbstractField {
         return defaultProvider.defaultValidatorBinding("value", resources);
     }
 
-    public Upload() {
-    }
 
     @SetupRender
-    void multiSetup() {
+    void setupRender() {
         String keyControlName = formSupport.allocateControlName(getClientId() + "Key");
         formSupport.storeAndExecute(this, new Setup(keyControlName));
         formSupport.store(this, new UploadProcessSubmission());
         outerId = javaScriptSupport.allocateClientId(getClientId() + "_outer");
-    }
-
-    protected void setupKeyControlName(String keyControlName) {
-        this.keyControlName = keyControlName;
-    }
-
-    @Override
-    protected void processSubmission(String controlName) {
-        // Ignore, handle using processMultiUpload instead
     }
 
     /**
@@ -232,16 +218,16 @@ public class Upload extends AbstractField {
     
     private Files resolveAllocationMaker(String key) {
         HttpServletRequest req = requestGlobals.getHTTPServletRequest();
-        UploadsContext bundleMakerContext = UploadsContext.get(req, true);
-        Files allocationMaker = null;
-        if (bundleMakerContext != null) {
-            allocationMaker = bundleMakerContext.get(key);
+        UploadsContext uploadContext = UploadsContext.get(req, true);
+        Files filesContext = null;
+        if (uploadContext != null) {
+            filesContext = uploadContext.get(key);
         }
         
-        if (allocationMaker == null) {
+        if (filesContext == null) {
             throw new IllegalStateException("Allocation maker is null");
         }
-        return allocationMaker;
+        return filesContext;
     }
     
     public Files getFilesContext() {
@@ -259,16 +245,9 @@ public class Upload extends AbstractField {
         
         writer.element("div", "id", outerId);
         
+        // Standard input element as would be found in the regular file upload.
         writer.element("div", "class" , "pw-failsafe-input");
-
         writer.element("input", "type", "file", "name", getControlName(), "id", getClientId());
-        
-        writer.element("p");
-        
-        writer.write(description);
-        
-        writer.end();
-        
         writer.end();
 
         validate.render(writer);
@@ -298,9 +277,6 @@ public class Upload extends AbstractField {
                 outerId, uploadLink, policy.getMaxFiles(), policy.getMaxFileSize(), policy.getClusterSize());
         
         uploadedFiles = allocationMaker.previewCompleted();
-        if (multiDescription == null) {
-            multiDescription = description;
-        }
         return true;
     }
 
@@ -314,16 +290,27 @@ public class Upload extends AbstractField {
     public List<FileBuilder> getValue() {
         return value;
     }
+    
+    /**
+     * Setup the key control
+     * @param keyControlName
+     */
+    protected void setupKeyControlName(String keyControlName) {
+        this.keyControlName = keyControlName;
+    }
+
+    @Override
+    protected void processSubmission(String controlName) {
+        // Ignore, handle using processMultiUpload instead
+    }
 
     Upload injectDecorator(ValidationDecorator decorator) {
         setDecorator(decorator);
-
         return this;
     }
 
     Upload injectRequest(Request request) {
         this.request = request;
-
         return this;
     }
 

@@ -28,8 +28,4 @@ public class PavewayModule {
     public static void contributeComponentClassResolver(Configuration<LibraryMapping> configuration) {
         configuration.add(new LibraryMapping("pw", "org.brekka.paveway.tapestry"));
     }
-
-//    public static void contributeRegexAuthorizer(Configuration<String> configuration) {
-//        configuration.add("^org/brekka/paveway/tapestry/.*\\.(?:js|jpg|gif|png)$");
-//    }
 }
