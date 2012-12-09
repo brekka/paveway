@@ -8,7 +8,7 @@ var PegasusUpload = {
 		var context = $('#' + id);
 		context.find(".pw-failsafe-input").remove();
 		var multiple = (navigator.userAgent.indexOf("Firefox") == -1);
-		context.find('span.pw-add-files').html('<input id="' + inputId + '" type="file" name="files[]" multiple="' + multiple + '" />');
+		context.find('span.pw-add-files').append('<input id="' + inputId + '" type="file" name="files[]" multiple="' + multiple + '" />');
 		context.find('div.pw-upload').removeClass("hidden");
 		var table = context.find('table');
 		if (table.find('tbody tr').size() == 0) {

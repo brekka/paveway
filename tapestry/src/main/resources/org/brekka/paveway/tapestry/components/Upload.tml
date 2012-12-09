@@ -3,9 +3,12 @@
       xmlns:p="tapestry:parameter">
       
 <div class="pw-upload hidden">
-	<span class="pw-add-files"></span>
+	<span class="pw-add-files btn btn-success fileinput-button">
+	   <i class="icon-plus icon-white"></i>
+	   <span>Add files...</span>
+	</span>
 	<div class="table-outer">
-    <table>
+    <table class="table table-striped">
         <thead>
             <tr>
                 <th>Filename</th>

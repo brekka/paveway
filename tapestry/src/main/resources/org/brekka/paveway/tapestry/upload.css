@@ -1,0 +1,17 @@
+/* From blueimp jQuery upload css */
+.pw-add-files input {
+    cursor: pointer;
+    direction: ltr;
+    font-size: 23px;
+    margin: 0;
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transform: translate(-300px, 0px) scale(4);
+}
+.pw-add-files {
+    margin: 0 4px 4px 0;
+    overflow: hidden;
+    position: relative;
+}

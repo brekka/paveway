@@ -75,7 +75,7 @@ import org.brekka.paveway.web.session.UploadsContext;
     "classpath:org/brekka/paveway/tapestry/jquery.iframe-transport.js",
     "classpath:org/brekka/paveway/tapestry/jquery.fileupload.js",
     "classpath:org/brekka/paveway/tapestry/upload.js"
-})
+}, stylesheet= "classpath:org/brekka/paveway/tapestry/upload.css")
 public class Upload extends AbstractField {
     public static final String MULTIPART_ENCTYPE = "multipart/form-data";
 
