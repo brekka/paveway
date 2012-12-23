@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
+import org.brekka.paveway.core.model.CompletableFile;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.FileInfo;
 import org.brekka.paveway.core.model.FilesContext;
@@ -95,7 +96,7 @@ class FilesImpl implements FilesContext, Files {
      * @see org.brekka.paveway.web.session.Files#previewCompleted()
      */
     @Override
-    public List<FileInfo> previewCompleted() {
+    public List<FileInfo> previewReady() {
         return new ArrayList<FileInfo>(completed);
     }
     
@@ -103,13 +104,13 @@ class FilesImpl implements FilesContext, Files {
      * @see org.brekka.paveway.web.session.Files#complete()
      */
     @Override
-    public synchronized List<FileBuilder> complete() {
+    public synchronized List<CompletableFile> retrieveReady() {
         // Deallocate the files that were never completed
         Collection<FileBuilder> values = inProgress.values();
         discardAll(values);
         inProgress.clear();
         
-        List<FileBuilder> fileBuilders = new ArrayList<>(completed);
+        List<CompletableFile> fileBuilders = new ArrayList<CompletableFile>(completed);
         completed.clear();
         done = true;
         return fileBuilders;

@@ -9,7 +9,7 @@ package org.brekka.paveway.core.model;
  * @author Andrew Taylor
  *
  */
-public interface FileBuilder extends FileInfo {
+public interface FileBuilder extends CompletableFile {
 
     /**
      * The thing to write the bytes to

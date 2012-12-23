@@ -16,9 +16,11 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
 import org.brekka.paveway.core.dao.CryptedPartDAO;
+import org.brekka.paveway.core.model.CompletableFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
+import org.brekka.paveway.core.model.EncryptedFileImporter;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.PavewayService;
@@ -90,8 +92,15 @@ public class PavewayServiceImpl implements PavewayService {
     
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public CryptedFile complete(FileBuilder fileBuilder) {
-        FileBuilderImpl fileBuilderImpl = narrow(fileBuilder);
+    public EncryptedFileImporter importEncryptedFile(String fileName, long originalLength, byte[] originalChecksum, Compression compression, SecretKey secretKey) {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+    
+    @Override
+    @Transactional(propagation=Propagation.REQUIRED)
+    public CryptedFile complete(CompletableFile completableFile) {
+        FileBuilderImpl fileBuilderImpl = narrow(completableFile);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
         List<CryptedPart> parts = cryptedFile.getParts();
         for (CryptedPart cryptedPart : parts) {
@@ -129,12 +138,13 @@ public class PavewayServiceImpl implements PavewayService {
         return new MultipartInputStream(cryptedFile, resourceStorageService, resourceCryptoService);
     }
     
-    protected FileBuilderImpl narrow(FileBuilder fileBuilder) {
-        if (fileBuilder instanceof FileBuilderImpl == false) {
+    protected FileBuilderImpl narrow(CompletableFile file) {
+        if (file instanceof FileBuilderImpl == false) {
             throw new PavewayException(PavewayErrorCode.PW300, "Not a managed file builder instance");
         }
-        return (FileBuilderImpl) fileBuilder;
+        return (FileBuilderImpl) file;
     }
+    
     
     static List<CryptedPart> sortByOffset(Collection<CryptedPart> parts) {
         List<CryptedPart> sortedParts = new ArrayList<>(parts);

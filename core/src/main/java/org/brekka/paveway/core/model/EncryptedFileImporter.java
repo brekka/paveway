@@ -14,34 +14,16 @@
  * limitations under the License.
  */
 
-package org.brekka.paveway.web.model;
+package org.brekka.paveway.core.model;
 
-import java.util.List;
-
-import org.brekka.paveway.core.model.CompletableFile;
-import org.brekka.paveway.core.model.FileInfo;
-import org.brekka.paveway.core.model.UploadPolicy;
+import java.io.InputStream;
 
 /**
- * TODO Description of Files
+ * TODO Description of EncryptedFileImporter
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public interface Files {
+public interface EncryptedFileImporter extends CompletableFile {
 
-    boolean isDone();
-
-    List<FileInfo> previewReady();
-
-    List<CompletableFile> retrieveReady();
-    
-    void discard();
-
-    UploadPolicy getPolicy();
-    
-    void addAttribute(String key, Object value);
-    
-    <T> T getAttribute(String key, Class<T> type);
-    
-    void removeAttribute(String key);
+    void allocatePart(InputStream is, byte[] iv, byte[] originalChecksum, long originalLength);
 }

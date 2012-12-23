@@ -42,13 +42,13 @@ public class CryptedPart implements IdentifiableEntity<UUID>, SymmetricCryptoSpe
     private CryptedFile file;
     
     /**
-     * The offset from the start of the file that this part represents.
+     * The offset from the start of the file that this part represents based on the plaintext form.
      */
     @Column(name="`Offset`")
     private long offset;
     
     /**
-     * The length of this part
+     * The length of this part in its plaintext form.
      */
     @Column(name="`Length`")
     private long length;
@@ -66,7 +66,7 @@ public class CryptedPart implements IdentifiableEntity<UUID>, SymmetricCryptoSpe
     private byte[] originalChecksum;
     
     /**
-     * Checksum of all parts of the encrypted file.
+     * Checksum of this encrypted part
      */
     @Column(name="`EncryptedChecksum`")
     private byte[] encryptedChecksum;

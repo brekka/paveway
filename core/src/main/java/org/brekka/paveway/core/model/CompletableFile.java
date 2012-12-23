@@ -14,34 +14,13 @@
  * limitations under the License.
  */
 
-package org.brekka.paveway.web.model;
-
-import java.util.List;
-
-import org.brekka.paveway.core.model.CompletableFile;
-import org.brekka.paveway.core.model.FileInfo;
-import org.brekka.paveway.core.model.UploadPolicy;
+package org.brekka.paveway.core.model;
 
 /**
- * TODO Description of Files
+ * TODO Description of CompletableFile
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public interface Files {
+public interface CompletableFile extends FileInfo {
 
-    boolean isDone();
-
-    List<FileInfo> previewReady();
-
-    List<CompletableFile> retrieveReady();
-    
-    void discard();
-
-    UploadPolicy getPolicy();
-    
-    void addAttribute(String key, Object value);
-    
-    <T> T getAttribute(String key, Class<T> type);
-    
-    void removeAttribute(String key);
 }

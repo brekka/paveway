@@ -56,6 +56,7 @@ import org.apache.tapestry5.services.javascript.JavaScriptSupport;
 import org.apache.tapestry5.upload.services.MultipartDecoder;
 import org.apache.tapestry5.upload.services.UploadedFile;
 import org.brekka.commons.lang.ByteLengthFormat;
+import org.brekka.paveway.core.model.CompletableFile;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.FileInfo;
 import org.brekka.paveway.core.model.UploadPolicy;
@@ -83,7 +84,7 @@ public class Upload extends AbstractField {
      * The uploaded file value
      */
     @Parameter(required = false, principal = true, autoconnect = true)
-    private List<FileBuilder> value;
+    private List<CompletableFile> value;
     
     /**
      * The object that will perform input validation. The "validate:" binding prefix is generally used to provide this
@@ -192,9 +193,9 @@ public class Upload extends AbstractField {
         String key = request.getParameter(keyControlName);
         filesContext = resolveAllocationMaker(key);
 
-        List<FileBuilder> fileBuilderList;
+        List<CompletableFile> fileBuilderList;
         if (uploaded == null) {
-            fileBuilderList = filesContext.complete();
+            fileBuilderList = filesContext.retrieveReady();
         } else {
             filesContext.discard();
             Object object;
@@ -205,7 +206,7 @@ public class Upload extends AbstractField {
                 if (object instanceof EncryptedFileItem) {
                     EncryptedFileItem encryptedFileItem = (EncryptedFileItem) object;
                     FileBuilder fileBuilder = encryptedFileItem.complete(null);
-                    fileBuilderList = Arrays.asList(fileBuilder);
+                    fileBuilderList = Arrays.<CompletableFile>asList(fileBuilder);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -276,7 +277,7 @@ public class Upload extends AbstractField {
         javaScriptSupport.addScript("PegasusUpload.apply('%s', '%s', %d, %d, %d);", 
                 outerId, uploadLink, policy.getMaxFiles(), policy.getMaxFileSize(), policy.getClusterSize());
         
-        uploadedFiles = allocationMaker.previewCompleted();
+        uploadedFiles = allocationMaker.previewReady();
         return true;
     }
 
@@ -287,7 +288,7 @@ public class Upload extends AbstractField {
     /**
      * @return the value
      */
-    public List<FileBuilder> getValue() {
+    public List<CompletableFile> getValue() {
         return value;
     }
     
