@@ -20,7 +20,6 @@ import org.brekka.paveway.core.model.CompletableFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
-import org.brekka.paveway.core.model.EncryptedFileImporter;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.PavewayService;
@@ -88,13 +87,6 @@ public class PavewayServiceImpl implements PavewayService {
         
         return new FileBuilderImpl(cryptedFile, cryptoProfile, digestCryptoService,
                 resourceCryptoService, resourceStorageService, uploadPolicy);
-    }
-    
-    @Override
-    @Transactional(propagation=Propagation.REQUIRED)
-    public EncryptedFileImporter importEncryptedFile(String fileName, long originalLength, byte[] originalChecksum, Compression compression, SecretKey secretKey) {
-        // TODO
-        throw new UnsupportedOperationException();
     }
     
     @Override
