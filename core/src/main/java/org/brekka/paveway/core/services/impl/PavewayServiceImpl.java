@@ -107,14 +107,14 @@ public class PavewayServiceImpl implements PavewayService {
      */
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public void removeFile(UUID cryptedFileId) {
-        CryptedFile cryptedFile = cryptedFileDAO.retrieveById(cryptedFileId);
-        List<CryptedPart> parts = cryptedFile.getParts();
+    public void removeFile(CryptedFile cryptedFile) {
+        CryptedFile managedCryptedFile = cryptedFileDAO.retrieveById(cryptedFile.getId());
+        List<CryptedPart> parts = managedCryptedFile.getParts();
         for (CryptedPart part : parts) {
             cryptedPartDAO.delete(part.getId());
             resourceStorageService.remove(part.getId());
         }
-        cryptedFileDAO.delete(cryptedFileId);
+        cryptedFileDAO.delete(managedCryptedFile.getId());
     }
     
     /* (non-Javadoc)
@@ -126,6 +126,7 @@ public class PavewayServiceImpl implements PavewayService {
     }
     
     @Override
+    @Transactional(propagation=Propagation.REQUIRED)
     public InputStream download(CryptedFile cryptedFile) {
         return new MultipartInputStream(cryptedFile, resourceStorageService, resourceCryptoService);
     }

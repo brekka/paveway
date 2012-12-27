@@ -31,7 +31,7 @@ public class CryptedPart implements IdentifiableEntity<UUID>, SymmetricCryptoSpe
     
     @Id
     @Type(type="pg-uuid")
-    @Column(name="ID")
+    @Column(name="`ID`")
     private UUID id;
     
     /**

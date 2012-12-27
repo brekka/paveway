@@ -28,5 +28,5 @@ public interface PavewayService {
     /**
      * @param cryptedFileId
      */
-    void removeFile(UUID cryptedFileId);
+    void removeFile(CryptedFile cryptedFile);
 }

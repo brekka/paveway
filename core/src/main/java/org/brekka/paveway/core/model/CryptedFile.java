@@ -32,7 +32,7 @@ public class CryptedFile implements IdentifiableEntity<UUID> {
     
     @Id
     @Type(type="pg-uuid")
-    @Column(name="ID")
+    @Column(name="`ID`")
     private UUID id;
 
     /**
