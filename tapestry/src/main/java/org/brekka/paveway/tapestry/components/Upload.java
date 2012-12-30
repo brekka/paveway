@@ -95,6 +95,10 @@ public class Upload extends AbstractField {
      */
     @Parameter(defaultPrefix = BindingConstants.VALIDATE)
     private FieldValidator<Object> validate;
+    
+    
+    @Parameter(required = false, defaultPrefix = BindingConstants.PROP)
+    private UploadPolicy uploadPolicy;
 
     @Property
     protected List<UploadedFileInfo> uploadedFiles;
@@ -222,7 +226,7 @@ public class Upload extends AbstractField {
         UploadsContext uploadContext = UploadsContext.get(req, true);
         T files = null;
         if (uploadContext != null) {
-            files = uploadContext.get(key);
+            files = uploadContext.get(key, uploadPolicy);
         }
         
         if (files == null) {

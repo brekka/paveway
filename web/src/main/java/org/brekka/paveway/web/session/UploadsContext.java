@@ -48,8 +48,15 @@ public class UploadsContext {
     public synchronized boolean contains(String makerKey) {
         return map().containsKey(makerKey);
     }
-
+    
     public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(String makerKey) {
+        return get(makerKey, null);
+    }
+
+    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(String makerKey, UploadPolicy policy) {
+        if (policy == null) {
+            policy = this.policy;
+        }
         Map<String, UploadedFilesContextImpl> map = map();
         UploadedFilesContextImpl files = map.get(makerKey);
         if (files == null) {
