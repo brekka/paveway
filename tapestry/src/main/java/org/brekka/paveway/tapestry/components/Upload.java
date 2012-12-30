@@ -269,15 +269,14 @@ public class Upload extends AbstractField {
         writer.element("input", "type", "hidden", "name", keyControlName, "value", compoundMakeKey);
         writer.end();
         
-        Files allocationMaker = resolveAllocationMaker(compoundMakeKey);
-        
-        UploadPolicy policy = allocationMaker.getPolicy();
+        Files files = resolveAllocationMaker(compoundMakeKey);
+        UploadPolicy policy = files.getPolicy();
         HttpServletRequest req = requestGlobals.getHTTPServletRequest();
         String uploadLink = req.getContextPath() + "/upload/" + compoundMakeKey;
         javaScriptSupport.addScript("PegasusUpload.apply('%s', '%s', %d, %d, %d);", 
                 outerId, uploadLink, policy.getMaxFiles(), policy.getMaxFileSize(), policy.getClusterSize());
         
-        uploadedFiles = allocationMaker.previewReady();
+        uploadedFiles = files.previewReady();
         return true;
     }
 

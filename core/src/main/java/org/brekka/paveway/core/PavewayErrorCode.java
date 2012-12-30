@@ -23,6 +23,7 @@ public enum PavewayErrorCode implements ErrorCode {
     PW600,
     
     PW700,
+    PW701,
     
     PW800,
     ;

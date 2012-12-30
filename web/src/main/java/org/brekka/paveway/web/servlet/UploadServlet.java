@@ -66,12 +66,16 @@ public class UploadServlet extends AbstractPavewayServlet {
                 factory = new EncryptedFileItemFactory(0, null, getPavewayService(), filesContext.getPolicy());
             }
         } catch (PavewayException e) {
-            if (e.getErrorCode() == PavewayErrorCode.PW700) {
-                // Too many files
-                resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
-                return;
+            switch ((PavewayErrorCode) e.getErrorCode()) {
+                case PW700:
+                    resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
+                    return;
+                case PW701:
+                    resp.sendError(HttpServletResponse.SC_CONFLICT);
+                    return;
+                default:
+                    throw e;
             }
-            throw e;
         }
 
         // Parse the request
@@ -94,6 +98,9 @@ public class UploadServlet extends AbstractPavewayServlet {
         FileBuilder fileBuilder = filesContext.retrieve(xFileName);
         if (fileBuilder == null) {
             // Allocate a new file
+            if (filesContext.isDone()) {
+                throw new PavewayException(PavewayErrorCode.PW701, "This maker has already been completed");
+            }
             if (filesContext.isFileSlotAvailable()) {
                 fileBuilder = getPavewayService().begin(xFileName, xFileType, filesContext.getPolicy());
                 filesContext.retain(xFileName, fileBuilder);

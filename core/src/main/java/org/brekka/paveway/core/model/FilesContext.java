@@ -10,6 +10,8 @@ package org.brekka.paveway.core.model;
  */
 public interface FilesContext {
 
+    
+    
     UploadPolicy getPolicy();
     
     void retain(String fileName, FileBuilder fileBuilder);
@@ -23,4 +25,6 @@ public interface FilesContext {
      * @return
      */
     boolean isFileSlotAvailable();
+    
+    boolean isDone();
 }

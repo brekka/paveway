@@ -23,6 +23,8 @@ import org.brekka.paveway.web.model.Files;
  */
 class FilesImpl implements FilesContext, Files {
 
+    private final UploadsContext context;
+    
     private final String makerKey;
     
     private final UploadPolicy policy;
@@ -39,9 +41,10 @@ class FilesImpl implements FilesContext, Files {
     /**
      * @param makerKey
      */
-    public FilesImpl(String makerKey, UploadPolicy policy) {
+    public FilesImpl(String makerKey, UploadPolicy policy, UploadsContext context) {
         this.makerKey = makerKey;
         this.policy = policy;
+        this.context = context;
     }
     
     public synchronized boolean isFileSlotAvailable() {
@@ -113,6 +116,7 @@ class FilesImpl implements FilesContext, Files {
         List<CompletableFile> fileBuilders = new ArrayList<CompletableFile>(completed);
         completed.clear();
         done = true;
+        context.free(makerKey);
         return fileBuilders;
     }
     

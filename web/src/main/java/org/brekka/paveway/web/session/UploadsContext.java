@@ -37,7 +37,7 @@ public class UploadsContext {
         Map<String, FilesImpl> map = map();
         FilesImpl files = map.get(makerKey);
         if (files == null) {
-            files = new FilesImpl(makerKey, policy);
+            files = new FilesImpl(makerKey, policy, this);
             map.put(makerKey, files);
         }
         return files;
@@ -49,6 +49,10 @@ public class UploadsContext {
             files.discard();
         }
         makers.clear();
+    }
+    
+    synchronized void free(String makerKey) {
+        makers.remove(makerKey);
     }
     
     private synchronized Map<String, FilesImpl> map() {
