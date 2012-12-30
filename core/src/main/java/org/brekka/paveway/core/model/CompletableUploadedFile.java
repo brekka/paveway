@@ -16,11 +16,17 @@
 
 package org.brekka.paveway.core.model;
 
+import org.brekka.paveway.core.services.PavewayService;
+
 /**
- * TODO Description of CompletableFile
+ * A reference to an uploaded file that needs to be passed to {@link PavewayService#complete(CompletableUploadedFile)} to be fully completed. 
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public interface CompletableFile extends FileInfo {
-
+public interface CompletableUploadedFile extends UploadedFileInfo {
+    
+    /**
+     * Discard this uploaded file, removing any resources that might have been created.
+     */
+    void discard();
 }

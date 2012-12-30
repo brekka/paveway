@@ -1,22 +1,23 @@
-// Copyright 2007, 2008, 2009, 2011 The Apache Software Foundation
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.brekka.paveway.tapestry.components;
 
 import java.lang.reflect.Field;
 import java.text.Format;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -56,18 +57,20 @@ import org.apache.tapestry5.services.javascript.JavaScriptSupport;
 import org.apache.tapestry5.upload.services.MultipartDecoder;
 import org.apache.tapestry5.upload.services.UploadedFile;
 import org.brekka.commons.lang.ByteLengthFormat;
-import org.brekka.paveway.core.model.CompletableFile;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.FileInfo;
+import org.brekka.paveway.core.model.UploadedFileInfo;
+import org.brekka.paveway.core.model.UploadedFiles;
 import org.brekka.paveway.core.model.UploadPolicy;
-import org.brekka.paveway.web.upload.EncryptedFileItem;
-import org.brekka.paveway.web.model.Files;
+import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.session.UploadsContext;
+import org.brekka.paveway.web.upload.EncryptedFileItem;
 
 /**
  * A component to upload files that enhances the default tapestry component with advanced HTML5 multi-file-upload support.
  * It will still fall back to plain file upload if HTML5 features are unavailable.
  * 
+ * @author Andrew Taylor (andrew@brekka.org) 
+ * @author Original authors of org.apache.tapestry5.upload.components.Upload that this is based on
  * @see org.apache.tapestry5.upload.components.Upload
  */
 @Events(EventConstants.VALIDATE)
@@ -84,7 +87,7 @@ public class Upload extends AbstractField {
      * The uploaded file value
      */
     @Parameter(required = false, principal = true, autoconnect = true)
-    private List<CompletableFile> value;
+    private UploadedFiles value;
     
     /**
      * The object that will perform input validation. The "validate:" binding prefix is generally used to provide this
@@ -94,10 +97,10 @@ public class Upload extends AbstractField {
     private FieldValidator<Object> validate;
 
     @Property
-    protected List<FileInfo> uploadedFiles;
+    protected List<UploadedFileInfo> uploadedFiles;
 
     @Property
-    protected FileInfo loopFile;
+    protected UploadedFileInfo loopFile;
     
     @Environmental
     private ValidationTracker tracker;
@@ -149,7 +152,7 @@ public class Upload extends AbstractField {
     
     private String outerId;
     
-    private Files filesContext;
+    private UploadedFiles files;
     
     
     public void init(String makeKey) {
@@ -191,13 +194,10 @@ public class Upload extends AbstractField {
         }
         
         String key = request.getParameter(keyControlName);
-        filesContext = resolveAllocationMaker(key);
+        files = resolveFiles(key);
 
-        List<CompletableFile> fileBuilderList;
-        if (uploaded == null) {
-            fileBuilderList = filesContext.retrieveReady();
-        } else {
-            filesContext.discard();
+        if (uploaded != null) {
+            files.discard();
             Object object;
             try {
                 Field field = uploaded.getClass().getDeclaredField("item");
@@ -206,7 +206,7 @@ public class Upload extends AbstractField {
                 if (object instanceof EncryptedFileItem) {
                     EncryptedFileItem encryptedFileItem = (EncryptedFileItem) object;
                     FileBuilder fileBuilder = encryptedFileItem.complete(null);
-                    fileBuilderList = Arrays.<CompletableFile>asList(fileBuilder);
+                    ((UploadingFilesContext) files).retain(fileBuilder.getFileName(), fileBuilder);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -214,27 +214,23 @@ public class Upload extends AbstractField {
                 throw new IllegalStateException(e);
             }
         }
-        value = fileBuilderList;
+        value = files;
     }
     
-    private Files resolveAllocationMaker(String key) {
+    private <T extends UploadedFiles & UploadingFilesContext> T resolveFiles(String key) {
         HttpServletRequest req = requestGlobals.getHTTPServletRequest();
         UploadsContext uploadContext = UploadsContext.get(req, true);
-        Files filesContext = null;
+        T files = null;
         if (uploadContext != null) {
-            filesContext = uploadContext.get(key);
+            files = uploadContext.get(key);
         }
         
-        if (filesContext == null) {
+        if (files == null) {
             throw new IllegalStateException("Allocation maker is null");
         }
-        return filesContext;
+        return files;
     }
     
-    public Files getFilesContext() {
-        return filesContext;
-    }
-
     /**
      * Render the upload tags.
      * 
@@ -269,7 +265,7 @@ public class Upload extends AbstractField {
         writer.element("input", "type", "hidden", "name", keyControlName, "value", compoundMakeKey);
         writer.end();
         
-        Files files = resolveAllocationMaker(compoundMakeKey);
+        UploadedFiles files = resolveFiles(compoundMakeKey);
         UploadPolicy policy = files.getPolicy();
         HttpServletRequest req = requestGlobals.getHTTPServletRequest();
         String uploadLink = req.getContextPath() + "/upload/" + compoundMakeKey;
@@ -287,7 +283,7 @@ public class Upload extends AbstractField {
     /**
      * @return the value
      */
-    public List<CompletableFile> getValue() {
+    public UploadedFiles getValue() {
         return value;
     }
     

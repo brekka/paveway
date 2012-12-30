@@ -1,6 +1,19 @@
-/**
- * 
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package org.brekka.paveway.web.session;
 
 import java.util.ArrayList;
@@ -11,17 +24,19 @@ import java.util.Map;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
-import org.brekka.paveway.core.model.CompletableFile;
+import org.brekka.paveway.core.model.CompletableUploadedFile;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.FileInfo;
-import org.brekka.paveway.core.model.FilesContext;
+import org.brekka.paveway.core.model.UploadedFileInfo;
+import org.brekka.paveway.core.model.UploadedFiles;
 import org.brekka.paveway.core.model.UploadPolicy;
-import org.brekka.paveway.web.model.Files;
+import org.brekka.paveway.web.model.UploadingFilesContext;
 
 /**
- * @author Andrew Taylor
+ * Handles the uploaded files from creation to completion. 
+ *
+ * @author Andrew Taylor (andrew@brekka.org)
  */
-class FilesImpl implements FilesContext, Files {
+class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
 
     private final UploadsContext context;
     
@@ -41,7 +56,7 @@ class FilesImpl implements FilesContext, Files {
     /**
      * @param makerKey
      */
-    public FilesImpl(String makerKey, UploadPolicy policy, UploadsContext context) {
+    public UploadedFilesContextImpl(String makerKey, UploadPolicy policy, UploadsContext context) {
         this.makerKey = makerKey;
         this.policy = policy;
         this.context = context;
@@ -74,7 +89,7 @@ class FilesImpl implements FilesContext, Files {
      * @see org.brekka.paveway.core.model.FilesContext#complete(org.brekka.paveway.core.model.FileBuilder)
      */
     @Override
-    public void complete(FileBuilder fileBuilder) {
+    public void transferComplete(FileBuilder fileBuilder) {
         inProgress.remove(fileBuilder.getFileName());
         completed.add(fileBuilder);
     }
@@ -99,21 +114,21 @@ class FilesImpl implements FilesContext, Files {
      * @see org.brekka.paveway.web.session.Files#previewCompleted()
      */
     @Override
-    public List<FileInfo> previewReady() {
-        return new ArrayList<FileInfo>(completed);
+    public List<UploadedFileInfo> previewReady() {
+        return new ArrayList<UploadedFileInfo>(completed);
     }
     
     /* (non-Javadoc)
      * @see org.brekka.paveway.web.session.Files#complete()
      */
     @Override
-    public synchronized List<CompletableFile> retrieveReady() {
+    public synchronized List<CompletableUploadedFile> uploadComplete() {
         // Deallocate the files that were never completed
         Collection<FileBuilder> values = inProgress.values();
         discardAll(values);
         inProgress.clear();
         
-        List<CompletableFile> fileBuilders = new ArrayList<CompletableFile>(completed);
+        List<CompletableUploadedFile> fileBuilders = new ArrayList<CompletableUploadedFile>(completed);
         completed.clear();
         done = true;
         context.free(makerKey);
@@ -158,7 +173,7 @@ class FilesImpl implements FilesContext, Files {
             return (T) object;
         }
         throw new PavewayException(PavewayErrorCode.PW600, 
-                "Files[%s]: The attribute '%s' value type '%s' does not match the expected '%s'.", 
+                "UploadedFiles[%s]: The attribute '%s' value type '%s' does not match the expected '%s'.", 
                 getKey(), key, object.getClass().getName(), type.getName());
     }
     

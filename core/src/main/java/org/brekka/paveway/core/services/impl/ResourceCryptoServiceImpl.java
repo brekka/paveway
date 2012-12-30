@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
@@ -9,8 +25,8 @@ import java.util.zip.GZIPOutputStream;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.Compression;
+import org.brekka.paveway.core.model.ResourceEncryptor;
 import org.brekka.paveway.core.services.ResourceCryptoService;
-import org.brekka.paveway.core.services.ResourceEncryptor;
 import org.brekka.phoenix.api.DigestResult;
 import org.brekka.phoenix.api.SecretKey;
 import org.brekka.phoenix.api.StreamCryptor;
@@ -20,6 +36,11 @@ import org.brekka.phoenix.api.services.SymmetricCryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Combines standard symmetric encryption, compression and digesting.
+ *
+ * @author Andrew Taylor (andrew@brekka.org)
+ */
 @Service
 public class ResourceCryptoServiceImpl implements ResourceCryptoService {
 
@@ -68,9 +89,8 @@ public class ResourceCryptoServiceImpl implements ResourceCryptoService {
                     try {
                         is = new GZIPInputStream(cipherOutputStream);
                     } catch (IOException e) {
-                        // TODO
                         throw new PavewayException(PavewayErrorCode.PW400, e, 
-                                "GZip problem");
+                                "GZIP problem");
                     }
                     break;
                 case NONE:

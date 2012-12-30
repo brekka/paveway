@@ -1,6 +1,19 @@
-/**
- * 
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package org.brekka.paveway.core.services.impl;
 
 
@@ -16,7 +29,7 @@ import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.dao.CryptedFileDAO;
 import org.brekka.paveway.core.dao.CryptedPartDAO;
-import org.brekka.paveway.core.model.CompletableFile;
+import org.brekka.paveway.core.model.CompletableUploadedFile;
 import org.brekka.paveway.core.model.Compression;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
@@ -36,8 +49,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * @author Andrew Taylor
+ * Paveway service implementation
  *
+ * @author Andrew Taylor (andrew@brekka.org)
  */
 @Service
 @Transactional
@@ -68,7 +82,7 @@ public class PavewayServiceImpl implements PavewayService {
      * @see org.brekka.paveway.core.services.PavewayService#begin(java.lang.String)
      */
     @Override
-    public FileBuilder begin(String fileName, String mimeType, UploadPolicy uploadPolicy) {
+    public FileBuilder beginUpload(String fileName, String mimeType, UploadPolicy uploadPolicy) {
         Compression compression = Compression.NONE;
         // TODO more mime types that can be compressed
         if (mimeType.startsWith("text")) {
@@ -91,7 +105,7 @@ public class PavewayServiceImpl implements PavewayService {
     
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public CryptedFile complete(CompletableFile completableFile) {
+    public CryptedFile complete(CompletableUploadedFile completableFile) {
         FileBuilderImpl fileBuilderImpl = narrow(completableFile);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
         List<CryptedPart> parts = cryptedFile.getParts();
@@ -128,10 +142,13 @@ public class PavewayServiceImpl implements PavewayService {
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
     public InputStream download(CryptedFile cryptedFile) {
+        if (cryptedFile.getSecretKey() == null) {
+            throw new PavewayException(PavewayErrorCode.PW673, "The secret key must be set on the crypted file '%s'", cryptedFile.getId());
+        }
         return new MultipartInputStream(cryptedFile, resourceStorageService, resourceCryptoService);
     }
     
-    protected FileBuilderImpl narrow(CompletableFile file) {
+    protected FileBuilderImpl narrow(CompletableUploadedFile file) {
         if (file instanceof FileBuilderImpl == false) {
             throw new PavewayException(PavewayErrorCode.PW300, "Not a managed file builder instance");
         }

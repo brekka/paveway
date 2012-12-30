@@ -1,6 +1,19 @@
-/**
- * 
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package org.brekka.paveway.core.services.impl;
 
 import java.io.OutputStream;
@@ -14,13 +27,14 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.ByteSequence;
+import org.brekka.paveway.core.model.CompletableUploadedFile;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
+import org.brekka.paveway.core.model.ResourceEncryptor;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.ResourceCryptoService;
-import org.brekka.paveway.core.services.ResourceEncryptor;
 import org.brekka.paveway.core.services.ResourceStorageService;
 import org.brekka.phoenix.api.CryptoProfile;
 import org.brekka.phoenix.api.DigestResult;
@@ -72,6 +86,14 @@ class FileBuilderImpl implements FileBuilder {
     public String getFileName() {
         return cryptedFile.getFileName();
     }
+    
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.model.UploadedFileInfo#getMimeType()
+     */
+    @Override
+    public String getMimeType() {
+        return cryptedFile.getMimeType();
+    }
 
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.model.FileBuilder#allocatePart(java.io.OutputStream, long, long)
@@ -100,7 +122,7 @@ class FileBuilderImpl implements FileBuilder {
      * @see org.brekka.paveway.core.model.FileBuilder#isComplete()
      */
     @Override
-    public synchronized boolean isComplete() {
+    public synchronized boolean isTransferComplete() {
         boolean complete = false;
         List<CryptedPart> parts = cryptedFile.getParts();
         if (parts.size() == 1) {

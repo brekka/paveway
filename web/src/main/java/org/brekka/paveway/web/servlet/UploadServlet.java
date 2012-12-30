@@ -1,5 +1,17 @@
-/**
- * 
+/*
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.brekka.paveway.web.servlet;
 
@@ -18,8 +30,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
-import org.brekka.paveway.core.model.FilesContext;
 import org.brekka.paveway.core.model.UploadPolicy;
+import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.support.ContentDisposition;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
@@ -27,8 +39,9 @@ import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
 import org.brekka.paveway.web.session.UploadsContext;
 
 /**
- * @author Andrew Taylor
+ * Servlet for handling file uploads
  *
+ * @author Andrew Taylor (andrew@brekka.org)
  */
 public class UploadServlet extends AbstractPavewayServlet {
 
@@ -42,7 +55,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        FilesContext filesContext = getFilesContext(req);
+        UploadingFilesContext filesContext = getFilesContext(req);
         
         String xFileName = null;
         String contentDispositionStr = req.getHeader(ContentDisposition.HEADER);
@@ -94,7 +107,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param xFileType
      * @return
      */
-    protected FileItemFactory multipartFactory(FilesContext filesContext, String xFileName, String xFileType) {
+    protected FileItemFactory multipartFactory(UploadingFilesContext filesContext, String xFileName, String xFileType) {
         FileBuilder fileBuilder = filesContext.retrieve(xFileName);
         if (fileBuilder == null) {
             // Allocate a new file
@@ -102,7 +115,7 @@ public class UploadServlet extends AbstractPavewayServlet {
                 throw new PavewayException(PavewayErrorCode.PW701, "This maker has already been completed");
             }
             if (filesContext.isFileSlotAvailable()) {
-                fileBuilder = getPavewayService().begin(xFileName, xFileType, filesContext.getPolicy());
+                fileBuilder = getPavewayService().beginUpload(xFileName, xFileType, filesContext.getPolicy());
                 filesContext.retain(xFileName, fileBuilder);
             } else {
                 throw new PavewayException(PavewayErrorCode.PW700, "Unable to add any more files to this maker");
@@ -119,7 +132,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param upload 
      * 
      */
-    private static void handle(FileItemFactory factory, FilesContext filesContext, HttpServletRequest req, HttpServletResponse resp) 
+    private static void handle(FileItemFactory factory, UploadingFilesContext filesContext, HttpServletRequest req, HttpServletResponse resp) 
                 throws FileUploadException {
         UploadPolicy policy = filesContext.getPolicy();
         // Create a new file upload handler
@@ -134,18 +147,18 @@ public class UploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    filesContext.complete(fileBuilder);
+                    filesContext.transferComplete(fileBuilder);
                 }
             }
         }
     }
     
-    protected FilesContext getFilesContext(HttpServletRequest req) {
+    protected UploadingFilesContext getFilesContext(HttpServletRequest req) {
         String contextPath = req.getContextPath();
         String requestURI = req.getRequestURI();
         requestURI = requestURI.substring(contextPath.length());
         String makerKey = StringUtils.substringAfterLast(requestURI, "/");
         UploadsContext bundleMakerContext = UploadsContext.get(req, true);
-        return (FilesContext) bundleMakerContext.get(makerKey);
+        return (UploadingFilesContext) bundleMakerContext.get(makerKey);
     }
 }

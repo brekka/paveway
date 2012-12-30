@@ -14,34 +14,30 @@
  * limitations under the License.
  */
 
-package org.brekka.paveway.web.model;
-
-import java.util.List;
-
-import org.brekka.paveway.core.model.CompletableFile;
-import org.brekka.paveway.core.model.FileInfo;
-import org.brekka.paveway.core.model.UploadPolicy;
+package org.brekka.paveway.core.model;
 
 /**
- * TODO Description of Files
+ * Information about a recently uploaded file.
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public interface Files {
+public interface UploadedFileInfo {
 
-    boolean isDone();
-
-    List<FileInfo> previewReady();
-
-    List<CompletableFile> retrieveReady();
+    /**
+     * File name
+     * @return
+     */
+    String getFileName();
     
-    void discard();
-
-    UploadPolicy getPolicy();
+    /**
+     * File length in bytes
+     * @return
+     */
+    long getLength();
     
-    void addAttribute(String key, Object value);
-    
-    <T> T getAttribute(String key, Class<T> type);
-    
-    void removeAttribute(String key);
+    /**
+     * The MIME type
+     * @return
+     */
+    String getMimeType();
 }
