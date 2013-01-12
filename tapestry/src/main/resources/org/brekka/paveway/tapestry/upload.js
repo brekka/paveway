@@ -1,4 +1,4 @@
-var PegasusUpload = {
+var PavewayUpload = {
     ready : {},
 	apply : function (id, uploadLink, pMaxFiles, pMaxFileSize, pMaxChunkSize) {
 		if (!(window.File && window.FileReader && window.FileList && window.Blob)) {
@@ -26,7 +26,7 @@ var PegasusUpload = {
 	        		cnt --;
 	            });
 	        	if (cnt == 0) {
-	        		PegasusUpload.ready[inputId] = true;
+	        		PavewayUpload.ready[inputId] = true;
 	        	}
 	        },
 	        add: function (e, data) {
@@ -54,7 +54,7 @@ var PegasusUpload = {
 	            });
 	        },
 	        start: function (e) {
-	        	PegasusUpload.ready[inputId] = false;
+	        	PavewayUpload.ready[inputId] = false;
 	        },
 	    });
 	}	

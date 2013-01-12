@@ -273,7 +273,7 @@ public class Upload extends AbstractField {
         UploadPolicy policy = files.getPolicy();
         HttpServletRequest req = requestGlobals.getHTTPServletRequest();
         String uploadLink = req.getContextPath() + "/upload/" + compoundMakeKey;
-        javaScriptSupport.addScript("PegasusUpload.apply('%s', '%s', %d, %d, %d);", 
+        javaScriptSupport.addScript("PavewayUpload.apply('%s', '%s', %d, %d, %d);", 
                 outerId, uploadLink, policy.getMaxFiles(), policy.getMaxFileSize(), policy.getClusterSize());
         
         uploadedFiles = files.previewReady();
