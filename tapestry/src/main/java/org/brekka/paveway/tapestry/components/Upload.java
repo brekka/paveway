@@ -23,7 +23,7 @@ import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.tapestry5.Asset;
 import org.apache.tapestry5.Binding;
 import org.apache.tapestry5.BindingConstants;
@@ -58,9 +58,9 @@ import org.apache.tapestry5.upload.services.MultipartDecoder;
 import org.apache.tapestry5.upload.services.UploadedFile;
 import org.brekka.commons.lang.ByteLengthFormat;
 import org.brekka.paveway.core.model.FileBuilder;
+import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.model.UploadedFileInfo;
 import org.brekka.paveway.core.model.UploadedFiles;
-import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.session.UploadsContext;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
@@ -152,7 +152,7 @@ public class Upload extends AbstractField {
     
     private String keyControlName;
     
-    private String makeKey = StringUtils.EMPTY;
+    private String makeKey;
     
     private String outerId;
     
@@ -262,7 +262,9 @@ public class Upload extends AbstractField {
             javaScriptSupport.importJavaScriptLibrary(uploadScript);
             javaScriptSupport.addInitializerCall("injectedUpload", getClientId());
         }
-        
+        if (makeKey == null) {
+            makeKey = RandomStringUtils.randomAlphabetic(4);
+        }
         String compoundMakeKey = makeKey + "_" + getControlName();
         
         writer.end();
