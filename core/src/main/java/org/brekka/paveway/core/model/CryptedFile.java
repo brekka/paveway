@@ -19,10 +19,12 @@ package org.brekka.paveway.core.model;
 import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -80,7 +82,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
     /**
      * The list of parts that make up this file
      */
-    @OneToMany(mappedBy = "file")
+    @OneToMany(mappedBy = "file", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
     private List<CryptedPart> parts;
 
     /**
@@ -99,7 +101,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return compression;
     }
 
-    public void setCompression(Compression compression) {
+    public void setCompression(final Compression compression) {
         this.compression = compression;
     }
 
@@ -107,7 +109,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return profile;
     }
 
-    public void setProfile(int profile) {
+    public void setProfile(final int profile) {
         this.profile = profile;
     }
 
@@ -115,7 +117,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return originalLength;
     }
 
-    public void setOriginalLength(long originalLength) {
+    public void setOriginalLength(final long originalLength) {
         this.originalLength = originalLength;
     }
 
@@ -123,7 +125,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return parts;
     }
 
-    public void setParts(List<CryptedPart> parts) {
+    public void setParts(final List<CryptedPart> parts) {
         this.parts = parts;
     }
 
@@ -131,7 +133,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return secretKey;
     }
 
-    public void setSecretKey(SecretKey secretKey) {
+    public void setSecretKey(final SecretKey secretKey) {
         this.secretKey = secretKey;
     }
 
@@ -139,7 +141,7 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return fileName;
     }
 
-    public void setFileName(String fileName) {
+    public void setFileName(final String fileName) {
         this.fileName = fileName;
     }
 
@@ -147,15 +149,17 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         return mimeType;
     }
 
-    public void setMimeType(String mimeType) {
+    public void setMimeType(final String mimeType) {
         this.mimeType = mimeType;
     }
 
-    public final UUID getId() {
+    @Override
+    public UUID getId() {
         return id;
     }
 
-    public final void setId(UUID id) {
+    @Override
+    public void setId(final UUID id) {
         this.id = id;
     }
 

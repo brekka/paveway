@@ -102,7 +102,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return file;
     }
 
-    public void setFile(CryptedFile file) {
+    public void setFile(final CryptedFile file) {
         this.file = file;
     }
 
@@ -110,7 +110,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return offset;
     }
 
-    public void setOffset(long offset) {
+    public void setOffset(final long offset) {
         this.offset = offset;
     }
 
@@ -118,7 +118,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return length;
     }
 
-    public void setLength(long length) {
+    public void setLength(final long length) {
         this.length = length;
     }
 
@@ -126,7 +126,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return iv;
     }
 
-    public void setIv(byte[] iv) {
+    public void setIv(final byte[] iv) {
         this.iv = iv;
     }
 
@@ -134,7 +134,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return originalChecksum;
     }
 
-    public void setOriginalChecksum(byte[] originalChecksum) {
+    public void setOriginalChecksum(final byte[] originalChecksum) {
         this.originalChecksum = originalChecksum;
     }
 
@@ -142,15 +142,17 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         return encryptedChecksum;
     }
 
-    public void setEncryptedChecksum(byte[] encryptedChecksum) {
+    public void setEncryptedChecksum(final byte[] encryptedChecksum) {
         this.encryptedChecksum = encryptedChecksum;
     }
 
-    public final UUID getId() {
+    @Override
+    public UUID getId() {
         return id;
     }
 
-    public final void setId(UUID id) {
+    @Override
+    public void setId(final UUID id) {
         this.id = id;
     }
 
@@ -183,19 +185,19 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
     public CryptoProfile getCryptoProfile() {
         return CryptoProfile.Static.of(getFile().getProfile());
     }
-    
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-            .append("id", id)
-            .append("length", length)
-            .append("offset", offset)
-            .append("IV", iv != null ? Base64.encodeBytes(iv) : null)
-            .append("originalChecksum", originalChecksum != null ? Base64.encodeBytes(originalChecksum) : null)
-            .append("encryptedChecksum", encryptedChecksum != null ? Base64.encodeBytes(encryptedChecksum) : null)
-            .toString();
+        .append("id", id)
+        .append("length", length)
+        .append("offset", offset)
+        .append("IV", iv != null ? Base64.encodeBytes(iv) : null)
+        .append("originalChecksum", originalChecksum != null ? Base64.encodeBytes(originalChecksum) : null)
+        .append("encryptedChecksum", encryptedChecksum != null ? Base64.encodeBytes(encryptedChecksum) : null)
+        .toString();
     }
 }

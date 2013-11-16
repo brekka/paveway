@@ -59,37 +59,37 @@ public class PavewayServiceImpl implements PavewayService {
 
     @Autowired
     private CryptoProfileService cryptoProfileService;
-    
+
     @Autowired
     private SymmetricCryptoService symmetricCryptoService;
-    
+
     @Autowired
     private DigestCryptoService digestCryptoService;
-    
+
     @Autowired
     private ResourceCryptoService resourceCryptoService;
-    
+
     @Autowired
     private ResourceStorageService resourceStorageService;
-    
+
     @Autowired
     private CryptedFileDAO cryptedFileDAO;
-    
+
     @Autowired
     private CryptedPartDAO cryptedPartDAO;
-    
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.services.PavewayService#begin(java.lang.String)
      */
     @Override
-    public FileBuilder beginUpload(String fileName, String mimeType, UploadPolicy uploadPolicy) {
+    public FileBuilder beginUpload(final String fileName, final String mimeType, final UploadPolicy uploadPolicy) {
         Compression compression = Compression.NONE;
         // TODO more mime types that can be compressed
         if (mimeType.startsWith("text")) {
             compression = Compression.GZIP;
         }
         CryptoProfile cryptoProfile = cryptoProfileService.retrieveDefault();
-        
+
         CryptedFile cryptedFile = new CryptedFile();
         cryptedFile.setParts(new ArrayList<CryptedPart>());
         cryptedFile.setCompression(compression);
@@ -98,14 +98,14 @@ public class PavewayServiceImpl implements PavewayService {
         cryptedFile.setMimeType(mimeType);
         SecretKey secretKey = symmetricCryptoService.createSecretKey(cryptoProfile);
         cryptedFile.setSecretKey(secretKey);
-        
+
         return new FileBuilderImpl(cryptedFile, cryptoProfile, digestCryptoService,
                 resourceCryptoService, resourceStorageService, uploadPolicy);
     }
-    
+
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public CryptedFile complete(CompletableUploadedFile completableFile) {
+    public CryptedFile complete(final CompletableUploadedFile completableFile) {
         FileBuilderImpl fileBuilderImpl = narrow(completableFile);
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
         List<CryptedPart> parts = cryptedFile.getParts();
@@ -115,13 +115,13 @@ public class PavewayServiceImpl implements PavewayService {
         cryptedFileDAO.create(cryptedFile);
         return cryptedFile;
     }
-    
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.services.PavewayService#removeFile(java.util.UUID)
      */
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public void removeFile(CryptedFile cryptedFile) {
+    public void removeFile(final CryptedFile cryptedFile) {
         CryptedFile managedCryptedFile = cryptedFileDAO.retrieveById(cryptedFile.getId());
         List<CryptedPart> parts = managedCryptedFile.getParts();
         for (CryptedPart part : parts) {
@@ -130,40 +130,42 @@ public class PavewayServiceImpl implements PavewayService {
         }
         cryptedFileDAO.delete(managedCryptedFile.getId());
     }
-    
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.services.PavewayService#retrieveCryptedFileById(java.util.UUID)
      */
     @Override
-    public CryptedFile retrieveCryptedFileById(UUID id) {
+    public CryptedFile retrieveCryptedFileById(final UUID id) {
         return cryptedFileDAO.retrieveById(id);
     }
-    
+
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
-    public InputStream download(CryptedFile cryptedFile) {
+    public InputStream download(final CryptedFile cryptedFile) {
+        CryptedFile managedFile = cryptedFileDAO.retrieveById(cryptedFile.getId());
         if (cryptedFile.getSecretKey() == null) {
-            throw new PavewayException(PavewayErrorCode.PW673, "The secret key must be set on the crypted file '%s'", cryptedFile.getId());
+            throw new PavewayException(PavewayErrorCode.PW673, "The secret key must be set on the crypted file '%s'",
+                    managedFile.getId());
         }
-        return new MultipartInputStream(cryptedFile, resourceStorageService, resourceCryptoService);
+        return new MultipartInputStream(managedFile, resourceStorageService, resourceCryptoService);
     }
-    
-    protected FileBuilderImpl narrow(CompletableUploadedFile file) {
+
+    protected FileBuilderImpl narrow(final CompletableUploadedFile file) {
         if (file instanceof FileBuilderImpl == false) {
             throw new PavewayException(PavewayErrorCode.PW300, "Not a managed file builder instance");
         }
         return (FileBuilderImpl) file;
     }
-    
-    
-    static List<CryptedPart> sortByOffset(Collection<CryptedPart> parts) {
+
+
+    static List<CryptedPart> sortByOffset(final Collection<CryptedPart> parts) {
         List<CryptedPart> sortedParts = new ArrayList<>(parts);
         Collections.sort(sortedParts, new Comparator<CryptedPart>() {
             /* (non-Javadoc)
              * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
              */
             @Override
-            public int compare(CryptedPart o1, CryptedPart o2) {
+            public int compare(final CryptedPart o1, final CryptedPart o2) {
                 return Long.valueOf(o1.getOffset()).compareTo(o2.getOffset());
             }
         });
