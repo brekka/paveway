@@ -88,7 +88,7 @@ public class PavewayServiceImpl implements PavewayService {
         if (mimeType.startsWith("text")) {
             compression = Compression.GZIP;
         }
-        CryptoProfile cryptoProfile = cryptoProfileService.retrieveDefault();
+        CryptoProfile cryptoProfile = this.cryptoProfileService.retrieveDefault();
 
         CryptedFile cryptedFile = new CryptedFile();
         cryptedFile.setParts(new ArrayList<CryptedPart>());
@@ -96,11 +96,11 @@ public class PavewayServiceImpl implements PavewayService {
         cryptedFile.setProfile(cryptoProfile.getNumber());
         cryptedFile.setFileName(fileName);
         cryptedFile.setMimeType(mimeType);
-        SecretKey secretKey = symmetricCryptoService.createSecretKey(cryptoProfile);
+        SecretKey secretKey = this.symmetricCryptoService.createSecretKey(cryptoProfile);
         cryptedFile.setSecretKey(secretKey);
 
-        return new FileBuilderImpl(cryptedFile, cryptoProfile, digestCryptoService,
-                resourceCryptoService, resourceStorageService, uploadPolicy);
+        return new FileBuilderImpl(cryptedFile, cryptoProfile, this.digestCryptoService,
+                this.resourceCryptoService, this.resourceStorageService, uploadPolicy);
     }
 
     @Override
@@ -110,9 +110,9 @@ public class PavewayServiceImpl implements PavewayService {
         CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
         List<CryptedPart> parts = cryptedFile.getParts();
         for (CryptedPart cryptedPart : parts) {
-            cryptedPartDAO.create(cryptedPart);
+            this.cryptedPartDAO.create(cryptedPart);
         }
-        cryptedFileDAO.create(cryptedFile);
+        this.cryptedFileDAO.create(cryptedFile);
         return cryptedFile;
     }
 
@@ -122,13 +122,13 @@ public class PavewayServiceImpl implements PavewayService {
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
     public void removeFile(final CryptedFile cryptedFile) {
-        CryptedFile managedCryptedFile = cryptedFileDAO.retrieveById(cryptedFile.getId());
+        CryptedFile managedCryptedFile = this.cryptedFileDAO.retrieveById(cryptedFile.getId());
         List<CryptedPart> parts = managedCryptedFile.getParts();
         for (CryptedPart part : parts) {
-            cryptedPartDAO.delete(part.getId());
-            resourceStorageService.remove(part.getId());
+            this.cryptedPartDAO.delete(part.getId());
+            this.resourceStorageService.remove(part.getId());
         }
-        cryptedFileDAO.delete(managedCryptedFile.getId());
+        this.cryptedFileDAO.delete(managedCryptedFile.getId());
     }
 
     /* (non-Javadoc)
@@ -136,18 +136,18 @@ public class PavewayServiceImpl implements PavewayService {
      */
     @Override
     public CryptedFile retrieveCryptedFileById(final UUID id) {
-        return cryptedFileDAO.retrieveById(id);
+        return this.cryptedFileDAO.retrieveById(id);
     }
 
     @Override
     @Transactional(propagation=Propagation.REQUIRED)
     public InputStream download(final CryptedFile cryptedFile) {
-        CryptedFile managedFile = cryptedFileDAO.retrieveById(cryptedFile.getId());
+        CryptedFile managedFile = this.cryptedFileDAO.retrieveById(cryptedFile.getId());
         if (cryptedFile.getSecretKey() == null) {
             throw new PavewayException(PavewayErrorCode.PW673, "The secret key must be set on the crypted file '%s'",
                     managedFile.getId());
         }
-        return new MultipartInputStream(managedFile, resourceStorageService, resourceCryptoService);
+        return new MultipartInputStream(managedFile, this.resourceStorageService, this.resourceCryptoService);
     }
 
     protected FileBuilderImpl narrow(final CompletableUploadedFile file) {

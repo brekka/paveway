@@ -24,7 +24,7 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.brekka.paveway.core.model.FileBuilder;
 
 /**
- * A encrypted {@link FileItemFactory} that supports files uploaded in multiple parts. 
+ * A encrypted {@link FileItemFactory} that supports files uploaded in multiple parts.
  * Must be session-bound.
  *
  * @author Andrew Taylor (andrew@brekka.org)
@@ -33,8 +33,7 @@ public class EncryptedMultipartFileItemFactory extends DiskFileItemFactory {
 
     private final FileBuilder fileBuilder;
     private final String fileName;
-    private final String contentType;
-    
+
     /**
      * @param sizeThreshold
      * @param repository
@@ -42,23 +41,22 @@ public class EncryptedMultipartFileItemFactory extends DiskFileItemFactory {
      * @param contentType
      * @param fileBuilder
      */
-    public EncryptedMultipartFileItemFactory(int sizeThreshold, File repository, String fileName, String contentType, FileBuilder fileBuilder) {
+    public EncryptedMultipartFileItemFactory(final int sizeThreshold, final File repository, final String fileName, final FileBuilder fileBuilder) {
         super(sizeThreshold, repository);
         this.fileBuilder = fileBuilder;
         this.fileName = fileName;
-        this.contentType = contentType;
     }
-    
+
     /* (non-Javadoc)
      * @see org.apache.commons.fileupload.disk.DiskFileItemFactory#createItem(java.lang.String, java.lang.String, boolean, java.lang.String)
      */
     @Override
-    public FileItem createItem(String fieldName, String ignoredContentType, boolean isFormField, String ignoredFileName) {
+    public FileItem createItem(final String fieldName, final String contentType, final boolean isFormField, final String ignoredFileName) {
         if (isFormField) {
-            return super.createItem(fieldName, contentType, isFormField, fileName);
+            return super.createItem(fieldName, contentType, isFormField, this.fileName);
         }
-        EncryptedFileItem result = new EncryptedFileItem(fieldName, this.contentType, 
-                this.fileName, fileBuilder, getSizeThreshold(), getRepository());
+        EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType,
+                this.fileName, this.fileBuilder, getSizeThreshold(), getRepository());
         return result;
     }
 }

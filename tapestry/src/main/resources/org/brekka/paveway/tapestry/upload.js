@@ -1,14 +1,12 @@
 var PavewayUpload = {
-    ready : {},
-	apply : function (id, uploadLink, pMaxFiles, pMaxFileSize, pMaxChunkSize) {
+	apply : function (id, uploadLink, pMaxFiles, pMaxFileSize, pMaxChunkSize, readyCallback) {
 		if (!(window.File && window.FileReader && window.FileList && window.Blob)) {
 			return;
 		}
 		var inputId = 'fileupload_' + id;
 		var context = $('#' + id);
 		context.find(".pw-failsafe-input").remove();
-		var multiple = (navigator.userAgent.indexOf("Firefox") == -1);
-		context.find('span.pw-add-files').append('<input id="' + inputId + '" type="file" name="files[]" multiple="' + multiple + '" />');
+		context.find('span.pw-add-files').append('<input id="' + inputId + '" type="file" name="files[]" multiple="multiple" />');
 		context.find('div.pw-upload').removeClass("hidden");
 		var table = context.find('table');
 		if (table.find('tbody tr').size() == 0) {
@@ -20,13 +18,16 @@ var PavewayUpload = {
 	    	maxChunkSize: pMaxChunkSize,
 	        dataType: 'json',
 	        url: uploadLink,
+	        multipart : false,
 	        done: function (e, data) {
 	        	$.each(data.files, function (index, file) {
 	        		$(file.progress).text("100%");
 	        		cnt --;
 	            });
 	        	if (cnt == 0) {
-	        		PavewayUpload.ready[inputId] = true;
+	        		if (readyCallback) {
+	        			readyCallback(true);
+	        		}
 	        	}
 	        },
 	        add: function (e, data) {
@@ -54,7 +55,9 @@ var PavewayUpload = {
 	            });
 	        },
 	        start: function (e) {
-	        	PavewayUpload.ready[inputId] = false;
+        		if (readyCallback) {
+        			readyCallback(false);
+        		}
 	        },
 	    });
 	}	

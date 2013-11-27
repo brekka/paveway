@@ -29,14 +29,14 @@ import org.brekka.paveway.core.model.UploadPolicy;
  * Paveway is an encrypted file upload service and retrieval service. When a file is uploaded the transferred bytes are
  * immediately encrypted. There is never a plaintext version of the file written to any persistence storage medium (and
  * only a small buffer of the file in memory at any one time.
- * 
+ *
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public interface PavewayService {
 
     /**
      * Begin a new file upload. All objects created during the upload process are non-committed.
-     * 
+     *
      * @param fileName
      *            the name of the file
      * @param mimeType
@@ -49,7 +49,7 @@ public interface PavewayService {
 
     /**
      * Complete the uploaded file, allocating a {@link CryptedFile} instance to make the file persistent.
-     * 
+     *
      * @param completableUploadedFile
      *            the uploaded file to complete.
      * @return the now committed crypted file.
@@ -58,7 +58,7 @@ public interface PavewayService {
 
     /**
      * Retrieve a crypted file by it's id.
-     * 
+     *
      * @param id
      *            the id of the file
      * @return the {@link CryptedFile} instance or null if it cannot be found.
@@ -69,7 +69,7 @@ public interface PavewayService {
      * Retrieve the plaintext content of the specified file. The
      * {@link CryptedFile#setSecretKey(org.brekka.phoenix.api.SecretKey)} method must be set with the secret key of the
      * file.
-     * 
+     *
      * @param file
      *            the file to download
      * @return a stream of the downloaded file.
@@ -79,7 +79,7 @@ public interface PavewayService {
 
     /**
      * Request the removal of the specified file, deallocating the database and stored bytes.
-     * 
+     *
      * @param cryptedFile
      *            the file to remove.
      */
