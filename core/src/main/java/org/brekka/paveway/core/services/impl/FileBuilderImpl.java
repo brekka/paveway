@@ -27,7 +27,6 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.ByteSequence;
-import org.brekka.paveway.core.model.CompletableUploadedFile;
 import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
@@ -42,28 +41,28 @@ import org.brekka.phoenix.api.StreamCryptor;
 import org.brekka.phoenix.api.services.DigestCryptoService;
 
 class FileBuilderImpl implements FileBuilder {
-    
+
     private final ResourceCryptoService resourceCryptoService;
-    
+
     private final ResourceStorageService resourceStorageService;
-    
+
     private final DigestCryptoService digestCryptoService;
-    
+
     private final CryptedFile cryptedFile;
-    
+
     private final CryptoProfile cryptoProfile;
-    
+
     private final List<PartAllocatorImpl> partAllocators = new ArrayList<>();
-    
+
     /**
      * Length of parts so far
      */
     private final AtomicLong uploadedBytesCount = new AtomicLong();
-    
+
     private final UploadPolicy policy;
-    
-    public FileBuilderImpl(CryptedFile cryptedFile, CryptoProfile cryptoProfile, DigestCryptoService digestCryptoService,
-            ResourceCryptoService resourceCryptoService, ResourceStorageService resourceStorageService, UploadPolicy policy) {
+
+    public FileBuilderImpl(final CryptedFile cryptedFile, final CryptoProfile cryptoProfile, final DigestCryptoService digestCryptoService,
+            final ResourceCryptoService resourceCryptoService, final ResourceStorageService resourceStorageService, final UploadPolicy policy) {
         this.digestCryptoService = digestCryptoService;
         this.resourceCryptoService = resourceCryptoService;
         this.resourceStorageService = resourceStorageService;
@@ -71,28 +70,50 @@ class FileBuilderImpl implements FileBuilder {
         this.cryptedFile = cryptedFile;
         this.policy = policy;
     }
-    
-    public void setLength(long length) {
-        cryptedFile.setOriginalLength(length);
+
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.model.UploadedFileInfo#getId()
+     */
+    @Override
+    public UUID getId() {
+        return this.cryptedFile.getId();
     }
-    
+
+    @Override
+    public void setLength(final long length) {
+        this.cryptedFile.setOriginalLength(length);
+    }
+
+    @Override
     public long getLength() {
-        return cryptedFile.getOriginalLength();
+        return this.cryptedFile.getOriginalLength();
     }
-    
+
     /**
      * @return the fileName
      */
+    @Override
     public String getFileName() {
-        return cryptedFile.getFileName();
+        return this.cryptedFile.getFileName();
     }
-    
+
+    /* (non-Javadoc)
+     * @see org.brekka.paveway.core.model.FileBuilder#renameTo(java.lang.String)
+     */
+    @Override
+    public void renameTo(final String name) {
+        if (!isTransferComplete()) {
+            throw new IllegalStateException("A file can only be renamed once it has been completed");
+        }
+        this.cryptedFile.setFileName(name);
+    }
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.model.UploadedFileInfo#getMimeType()
      */
     @Override
     public String getMimeType() {
-        return cryptedFile.getMimeType();
+        return this.cryptedFile.getMimeType();
     }
 
     /* (non-Javadoc)
@@ -100,34 +121,34 @@ class FileBuilderImpl implements FileBuilder {
      */
     @Override
     public PartAllocator allocatePart() {
-        if (uploadedBytesCount.longValue() >= policy.getMaxFileSize()) {
+        if (this.uploadedBytesCount.longValue() >= this.policy.getMaxFileSize()) {
             throw new PavewayException(PavewayErrorCode.PW700, "File has grown too large");
         }
         CryptedPart part = new CryptedPart();
         UUID partId = UUID.randomUUID();
         part.setId(partId);
-        part.setFile(cryptedFile);
-        cryptedFile.getParts().add(part);
-        ByteSequence partDestination = resourceStorageService.allocate(partId);
-        ResourceEncryptor encryptor = resourceCryptoService.encryptor(
-                cryptedFile.getSecretKey(), cryptedFile.getCompression());
-        StreamCryptor<OutputStream, DigestResult> digester = digestCryptoService.outputDigester(cryptoProfile);
-        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part, 
-                digester, partDestination, uploadedBytesCount);
-        partAllocators.add(partAllocatorImpl);
+        part.setFile(this.cryptedFile);
+        this.cryptedFile.getParts().add(part);
+        ByteSequence partDestination = this.resourceStorageService.allocate(partId);
+        ResourceEncryptor encryptor = this.resourceCryptoService.encryptor(
+                this.cryptedFile.getSecretKey(), this.cryptedFile.getCompression());
+        StreamCryptor<OutputStream, DigestResult> digester = this.digestCryptoService.outputDigester(this.cryptoProfile);
+        PartAllocatorImpl partAllocatorImpl = new PartAllocatorImpl(encryptor, part,
+                digester, partDestination, this.uploadedBytesCount);
+        this.partAllocators.add(partAllocatorImpl);
         return partAllocatorImpl;
     }
-    
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.model.FileBuilder#isComplete()
      */
     @Override
     public synchronized boolean isTransferComplete() {
         boolean complete = false;
-        List<CryptedPart> parts = cryptedFile.getParts();
+        List<CryptedPart> parts = this.cryptedFile.getParts();
         if (parts.size() == 1) {
             CryptedPart cryptedPart = parts.get(0);
-            complete = (cryptedPart.getLength() == cryptedFile.getOriginalLength());
+            complete = (cryptedPart.getLength() == this.cryptedFile.getOriginalLength());
         } else {
             List<CryptedPart> sortedParts = PavewayServiceImpl.sortByOffset(parts);
             long length = 0;
@@ -136,18 +157,18 @@ class FileBuilderImpl implements FileBuilder {
                     length += cryptedPart.getLength();
                 }
             }
-            complete = (length == cryptedFile.getOriginalLength());
+            complete = (length == this.cryptedFile.getOriginalLength());
         }
         return complete;
     }
-    
+
     /**
      * @return the cryptedFile
      */
     CryptedFile getCryptedFile() {
-        return cryptedFile;
+        return this.cryptedFile;
     }
-    
+
     /* (non-Javadoc)
      * @see org.brekka.paveway.core.model.FileBuilder#discard()
      */
@@ -156,19 +177,19 @@ class FileBuilderImpl implements FileBuilder {
         List<PartAllocatorImpl> partAllocators = this.partAllocators;
         for (PartAllocatorImpl partAllocatorImpl : partAllocators) {
             ByteSequence partDestination = partAllocatorImpl.getPartDestination();
-            resourceStorageService.remove(partDestination.getId());
+            this.resourceStorageService.remove(partDestination.getId());
         }
         this.partAllocators.clear();
     }
-    
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-            .append("fileName", cryptedFile.getFileName())
-            .append("mimeType", cryptedFile.getMimeType())
+            .append("fileName", this.cryptedFile.getFileName())
+            .append("mimeType", this.cryptedFile.getMimeType())
             .toString();
     }
 }

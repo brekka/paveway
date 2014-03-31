@@ -19,7 +19,9 @@ package org.brekka.paveway.web.servlet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLDecoder;
 import java.util.List;
+import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -74,6 +76,7 @@ public class UploadServlet extends AbstractPavewayServlet {
             ContentDisposition contentDisposition = ContentDisposition.valueOf(contentDispositionStr, encoding);
             fileName = contentDisposition.getFilename();
         }
+        String accept = req.getHeader("Accept");
         String contentType = req.getHeader("Content-Type");
         String contentLengthStr = req.getHeader("Content-Length");
         String contentRangeStr = req.getHeader(ContentRange.HEADER);
@@ -102,7 +105,12 @@ public class UploadServlet extends AbstractPavewayServlet {
                     resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Only one of Content-Range or Content-Length must be specified");
                     return;
                 }
-                processUpload(fileName, contentRange, contentType, req);
+                UUID id = processUpload(fileName, contentRange, contentType, req);
+                if (accept != null
+                        && accept.contains("application/json")) {
+                    resp.setContentType("application/json");
+                    resp.getWriter().printf("{\"id\": \"%s\"}", id);
+                }
             }
         } catch (PavewayException e) {
             switch ((PavewayErrorCode) e.getErrorCode()) {
@@ -118,9 +126,25 @@ public class UploadServlet extends AbstractPavewayServlet {
         } catch (FileUploadException e) {
             throw new PavewayException(PavewayErrorCode.PW800, e, "");
         }
+
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /* (non-Javadoc)
+     * @see javax.servlet.http.HttpServlet#doDelete(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
+     */
+    @Override
+    protected void doDelete(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        UploadingFilesContext filesContext = getFilesContext(req);
+        String requestUri = req.getRequestURI();
+        String fileName = StringUtils.substringAfterLast(requestUri, "/");
+        fileName = URLDecoder.decode(fileName, "UTF-8");
+        if (!filesContext.discard(fileName)) {
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+    }
 
 
     /**
@@ -129,7 +153,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param contentType
      * @param req
      */
-    private void processUpload(final String fileName, final ContentRange contentRange, final String contentType, final HttpServletRequest req) throws IOException {
+    private UUID processUpload(final String fileName, final ContentRange contentRange, final String contentType, final HttpServletRequest req) throws IOException {
         UploadingFilesContext uploadingFilesContext = getFilesContext(req);
         PavewayService pavewayService = getPavewayService();
         FileBuilder fileBuilder = uploadingFilesContext.retrieve(fileName);
@@ -157,6 +181,7 @@ public class UploadServlet extends AbstractPavewayServlet {
         if (fileBuilder.isTransferComplete()) {
             uploadingFilesContext.transferComplete(fileBuilder);
         }
+        return fileBuilder.getId();
     }
 
 
@@ -216,7 +241,8 @@ public class UploadServlet extends AbstractPavewayServlet {
         String contextPath = req.getContextPath();
         String requestURI = req.getRequestURI();
         requestURI = requestURI.substring(contextPath.length());
-        String makerKey = StringUtils.substringAfterLast(requestURI, "/");
+        String remainder = requestURI.substring(req.getServletPath().length() + 1);
+        String makerKey = StringUtils.substringBefore(remainder, "/");
         UploadsContext bundleMakerContext = UploadsContext.get(req, true);
         return bundleMakerContext.get(makerKey);
     }

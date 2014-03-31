@@ -23,15 +23,15 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.brekka.paveway.core.model.UploadedFiles;
 import org.brekka.paveway.core.model.UploadPolicy;
+import org.brekka.paveway.core.model.UploadedFiles;
 import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.support.PolicyHelper;
 
 /**
  * A context for file uploads that will be bound to a session. Supports multiple separate uploads via "makerkeys" which
  * allow individual page requests (or components with a single page) to have their own context.
- * 
+ *
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public class UploadsContext {
@@ -41,19 +41,19 @@ public class UploadsContext {
 
     private final UploadPolicy policy;
 
-    private UploadsContext(UploadPolicy policy) {
+    private UploadsContext(final UploadPolicy policy) {
         this.policy = policy;
     }
 
-    public synchronized boolean contains(String makerKey) {
+    public synchronized boolean contains(final String makerKey) {
         return map().containsKey(makerKey);
     }
-    
-    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(String makerKey) {
+
+    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey) {
         return get(makerKey, null);
     }
 
-    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(String makerKey, UploadPolicy policy) {
+    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey, UploadPolicy policy) {
         if (policy == null) {
             policy = this.policy;
         }
@@ -71,11 +71,11 @@ public class UploadsContext {
         for (UploadedFilesContextImpl files : values) {
             files.discard();
         }
-        makers.clear();
+        this.makers.clear();
     }
 
-    synchronized void free(String makerKey) {
-        makers.remove(makerKey);
+    synchronized void free(final String makerKey) {
+        this.makers.remove(makerKey);
     }
 
     private synchronized Map<String, UploadedFilesContextImpl> map() {
@@ -86,7 +86,13 @@ public class UploadsContext {
         return (this.makers = map);
     }
 
-    public static UploadsContext get(HttpServletRequest req, boolean create) {
+    public static void init(final HttpServletRequest req, final UploadPolicy policy) {
+        HttpSession session = req.getSession(true);
+        UploadsContext context = new UploadsContext(policy);
+        session.setAttribute(SESSION_KEY, context);
+    }
+
+    public static UploadsContext get(final HttpServletRequest req, final boolean create) {
         HttpSession session = req.getSession(create);
         if (session == null) {
             return null;
@@ -94,13 +100,20 @@ public class UploadsContext {
         return get(session);
     }
 
-    public static UploadsContext get(HttpSession session) {
-        UploadsContext content = (UploadsContext) session.getAttribute(SESSION_KEY);
+    public static UploadsContext get(final HttpSession session) {
+        UploadsContext context = (UploadsContext) session.getAttribute(SESSION_KEY);
         UploadPolicy policy = PolicyHelper.identifyPolicy(session.getServletContext());
-        if (content == null) {
-            content = new UploadsContext(policy);
-            session.setAttribute(SESSION_KEY, content);
+        if (context == null) {
+            context = new UploadsContext(policy);
+            session.setAttribute(SESSION_KEY, context);
         }
-        return content;
+        return context;
+    }
+
+    /**
+     * @return
+     */
+    public UploadPolicy getDefaultPolicy() {
+        return this.policy;
     }
 }

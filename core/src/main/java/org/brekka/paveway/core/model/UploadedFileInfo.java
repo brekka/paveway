@@ -16,6 +16,8 @@
 
 package org.brekka.paveway.core.model;
 
+import java.util.UUID;
+
 /**
  * Information about a recently uploaded file.
  *
@@ -24,17 +26,23 @@ package org.brekka.paveway.core.model;
 public interface UploadedFileInfo {
 
     /**
+     * ID
+     * @return
+     */
+    UUID getId();
+
+    /**
      * File name
      * @return
      */
     String getFileName();
-    
+
     /**
      * File length in bytes
      * @return
      */
     long getLength();
-    
+
     /**
      * The MIME type
      * @return

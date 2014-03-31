@@ -18,29 +18,35 @@ package org.brekka.paveway.core.model;
 
 /**
  * Constructs a file from one or more parts.
- * 
+ *
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public interface FileBuilder extends CompletableUploadedFile {
 
     /**
      * Allocate a new part for the file.
-     * 
+     *
      * @return a new part allocator.
      */
     PartAllocator allocatePart();
 
     /**
      * Set the length of the file, when known
-     * 
+     *
      * @param length
      */
     void setLength(long length);
 
     /**
      * Has the file been fully uploaded (all parts accounted for).
-     * 
+     *
      * @return true if all parts have been uploaded
      */
     boolean isTransferComplete();
+
+    /**
+     * Provide an opportunity to rename the file after it has been completed.
+     * @param name
+     */
+    void renameTo(String name);
 }

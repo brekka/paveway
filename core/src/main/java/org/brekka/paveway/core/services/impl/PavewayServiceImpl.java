@@ -91,6 +91,8 @@ public class PavewayServiceImpl implements PavewayService {
         CryptoProfile cryptoProfile = this.cryptoProfileService.retrieveDefault();
 
         CryptedFile cryptedFile = new CryptedFile();
+        // Set early
+        cryptedFile.setId(UUID.randomUUID());
         cryptedFile.setParts(new ArrayList<CryptedPart>());
         cryptedFile.setCompression(compression);
         cryptedFile.setProfile(cryptoProfile.getNumber());
