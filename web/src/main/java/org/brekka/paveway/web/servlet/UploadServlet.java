@@ -81,9 +81,14 @@ public class UploadServlet extends AbstractPavewayServlet {
         String contentLengthStr = req.getHeader("Content-Length");
         String contentRangeStr = req.getHeader(ContentRange.HEADER);
 
+        if (contentType == null) {
+            resp.setStatus(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
+            return;
+        }
+
         FileItemFactory factory;
         try {
-            if (contentType.equals("multipart/form-data")) {
+            if (contentType.toLowerCase().startsWith("multipart/form-data")) {
                 if (fileName == null) {
                     // Handles a standard file upload
                     factory = new EncryptedFileItemFactory(0, null, getPavewayService(), filesContext.getPolicy());
