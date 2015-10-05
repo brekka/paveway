@@ -48,6 +48,11 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
     private final List<FileBuilder> completed = new ArrayList<>();
 
     private final Map<String, FileBuilder> inProgress = new HashMap<>();
+    
+    /**
+     * The list of files uploaded
+     */
+    private final List<UploadedFileInfo> files = new ArrayList<>();
 
     private boolean done = false;
 
@@ -131,6 +136,8 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
         this.inProgress.clear();
 
         List<CompletableUploadedFile> fileBuilders = new ArrayList<CompletableUploadedFile>(this.completed);
+        // Make the uploaded file metadata available for reading.
+        files.addAll(fileBuilders);
         this.completed.clear();
         this.done = true;
         this.context.free(this.makerKey);
@@ -142,6 +149,11 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
      */
     public String getKey() {
         return this.makerKey;
+    }
+
+    @Override
+    public List<UploadedFileInfo> files() {
+        return files;
     }
 
 
@@ -233,5 +245,4 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
         }
         return false;
     }
-
 }

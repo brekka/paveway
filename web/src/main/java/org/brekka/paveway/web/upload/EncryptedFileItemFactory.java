@@ -21,6 +21,8 @@ import java.io.File;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.services.PavewayService;
@@ -31,6 +33,8 @@ import org.brekka.paveway.core.services.PavewayService;
  * @author Andrew Taylor
  */
 public class EncryptedFileItemFactory extends DiskFileItemFactory {
+    
+    private static final Log log = LogFactory.getLog(EncryptedFileItemFactory.class);
 
     protected final transient PavewayService pavewayService;
     
@@ -47,10 +51,13 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
      * Exactly the same as the supertype, except returns a {@link EncryptedFileItem}.
      */
     @Override
-    public FileItem createItem(String fieldName, String contentType,
-            boolean isFormField, String fileName) {
+    public FileItem createItem(String fieldName, String contentType, boolean isFormField, String fileName) {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, fileName);
+        }
+        if (log.isInfoEnabled()) {
+            log.info(String.format("Create file item '%s' of type '%s' from field '%s'", 
+                    fileName, contentType, fieldName));
         }
         FileBuilder fileBuilder = pavewayService.beginUpload(fileName, contentType, uploadPolicy);
         EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType, 

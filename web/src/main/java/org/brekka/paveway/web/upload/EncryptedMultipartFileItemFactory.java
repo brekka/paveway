@@ -21,6 +21,8 @@ import java.io.File;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.model.FileBuilder;
 
 /**
@@ -30,6 +32,9 @@ import org.brekka.paveway.core.model.FileBuilder;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public class EncryptedMultipartFileItemFactory extends DiskFileItemFactory {
+    
+    
+    private static final Log log = LogFactory.getLog(EncryptedMultipartFileItemFactory.class);
 
     private final FileBuilder fileBuilder;
     private final String fileName;
@@ -54,6 +59,10 @@ public class EncryptedMultipartFileItemFactory extends DiskFileItemFactory {
     public FileItem createItem(final String fieldName, final String contentType, final boolean isFormField, final String ignoredFileName) {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, this.fileName);
+        }
+        if (log.isInfoEnabled()) {
+            log.info(String.format("Create multipart item '%s' of type '%s' from field '%s' (ignored file name '%s')", 
+                    fileName, contentType, fieldName, ignoredFileName));
         }
         EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType,
                 this.fileName, this.fileBuilder, getSizeThreshold(), getRepository());

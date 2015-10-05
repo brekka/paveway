@@ -89,4 +89,10 @@ public interface UploadedFiles {
      * @param name
      */
     void renameFileTo(UUID id, String name);
+    
+    /**
+     * Once completed, returns the read-only information about the uploaded files.
+     * @return
+     */
+    List<UploadedFileInfo> files();
 }

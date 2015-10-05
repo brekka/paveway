@@ -33,6 +33,8 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
@@ -53,15 +55,15 @@ import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public class UploadServlet extends AbstractPavewayServlet {
+    
+    
+    private static final Log log = LogFactory.getLog(UploadServlet.class);
 
     /**
      * Serial UID
      */
     private static final long serialVersionUID = 4985042386032649934L;
 
-    /* (non-Javadoc)
-     * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
-     */
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         UploadingFilesContext filesContext = getFilesContext(req);
@@ -80,6 +82,18 @@ public class UploadServlet extends AbstractPavewayServlet {
         String contentType = req.getHeader("Content-Type");
         String contentLengthStr = req.getHeader("Content-Length");
         String contentRangeStr = req.getHeader(ContentRange.HEADER);
+        String remoteAddress = req.getRemoteAddr();
+        String onBehalfOfAddress = req.getHeader("X-Forwarded-For");
+        String userAgent = req.getHeader("User-Agent");
+        String uri = req.getRequestURI();
+        if (onBehalfOfAddress != null) {
+            remoteAddress = onBehalfOfAddress;
+        }
+        
+        if (log.isInfoEnabled()) {
+            log.info(String.format("Part from '%s', name: '%s' type: '%s', length: %s, range: '%s', path: %s, UA: %s", 
+                    remoteAddress, fileName, contentType, contentLengthStr, contentRangeStr, uri, userAgent));
+        }
 
         if (contentType == null) {
             resp.setStatus(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
@@ -92,6 +106,9 @@ public class UploadServlet extends AbstractPavewayServlet {
                 if (fileName == null) {
                     // Handles a standard file upload
                     factory = new EncryptedFileItemFactory(0, null, getPavewayService(), filesContext.getPolicy());
+                    if (log.isInfoEnabled()) {
+                        log.info(String.format("Handling multipart data from %s", remoteAddress));
+                    }
                     handle(factory, filesContext, req, resp);
                 } else {
                     throw new UnsupportedOperationException("This mode is no longer supported");
@@ -111,13 +128,20 @@ public class UploadServlet extends AbstractPavewayServlet {
                     return;
                 }
                 UUID id = processUpload(fileName, contentRange, contentType, req);
+                if (log.isInfoEnabled()) {
+                    log.info(String.format("Upload of '%s' from '%s' processed and assigned id %s", fileName, remoteAddress, id));
+                }
                 if (accept != null
                         && accept.contains("application/json")) {
                     resp.setContentType("application/json");
                     resp.getWriter().printf("{\"id\": \"%s\"}", id);
                 }
             }
+            resp.setStatus(HttpServletResponse.SC_OK);
         } catch (PavewayException e) {
+            if (log.isWarnEnabled()) {
+                log.warn(String.format("Upload of '%s' from '%s' encountered problem", fileName, remoteAddress), e);
+            }
             switch ((PavewayErrorCode) e.getErrorCode()) {
                 case PW700:
                     resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
@@ -128,11 +152,9 @@ public class UploadServlet extends AbstractPavewayServlet {
                 default:
                     throw e;
             }
-        } catch (FileUploadException e) {
-            throw new PavewayException(PavewayErrorCode.PW800, e, "");
+        } catch (Throwable e) {
+            throw new PavewayException(PavewayErrorCode.PW800, e, "Upload of '%s' from '%s' encountered problem", fileName, remoteAddress);
         }
-
-        resp.setStatus(HttpServletResponse.SC_OK);
     }
 
     /* (non-Javadoc)
