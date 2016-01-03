@@ -16,6 +16,7 @@
 
 package org.brekka.paveway.web.session;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,12 @@ import org.brekka.paveway.web.support.PolicyHelper;
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public class UploadsContext {
+public class UploadsContext implements Serializable {
+    /**
+     * Serial UID
+     */
+    private static final long serialVersionUID = 5795369149104679209L;
+
     public static final String SESSION_KEY = UploadsContext.class.getName();
 
     private transient Map<String, UploadedFilesContextImpl> makers;
@@ -110,9 +116,6 @@ public class UploadsContext {
         return context;
     }
 
-    /**
-     * @return
-     */
     public UploadPolicy getDefaultPolicy() {
         return this.policy;
     }

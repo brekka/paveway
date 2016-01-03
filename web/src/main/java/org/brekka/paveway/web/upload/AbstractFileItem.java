@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 
 import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileItemHeaders;
 import org.apache.commons.fileupload.util.Streams;
 
 /**
@@ -30,133 +31,104 @@ import org.apache.commons.fileupload.util.Streams;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public abstract class AbstractFileItem implements FileItem {
-    
+
     /**
      * Serial UID
      */
     private static final long serialVersionUID = -3851768581810069924L;
-    
+
     private final String contentType;
     private final String fileName;
     private final String fieldName;
-    
-    
+    private FileItemHeaders headers;
 
-    public AbstractFileItem(String fileName, String contentType, String fieldName) {
+
+
+    public AbstractFileItem(final String fileName, final String contentType, final String fieldName) {
         this.contentType = contentType;
         this.fileName = fileName;
         this.fieldName = fieldName;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getContentType()
-     */
     @Override
     public String getContentType() {
         return contentType;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getName()
-     */
     @Override
     public String getName() {
         return Streams.checkFileName(fileName);
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#isInMemory()
-     */
     @Override
     public boolean isInMemory() {
         return false;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getSize()
-     */
     @Override
     public long getSize() {
         return 0;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#get()
-     */
     @Override
     public byte[] get() {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getString(java.lang.String)
-     */
     @Override
-    public String getString(String encoding) throws UnsupportedEncodingException {
+    public String getString(final String encoding) throws UnsupportedEncodingException {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getString()
-     */
     @Override
     public String getString() {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#write(java.io.File)
-     */
     @Override
-    public void write(File file) throws Exception {
+    public void write(final File file) throws Exception {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#delete()
-     */
     @Override
     public void delete() {
         // Ignore, handled internally
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getFieldName()
-     */
     @Override
     public String getFieldName() {
         return fieldName;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#setFieldName(java.lang.String)
-     */
     @Override
-    public void setFieldName(String name) {
+    public void setFieldName(final String name) {
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#isFormField()
-     */
     @Override
     public boolean isFormField() {
         return false;
     }
 
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#setFormField(boolean)
-     */
     @Override
-    public void setFormField(boolean state) {
+    public void setFormField(final boolean state) {
         throw new UnsupportedOperationException();
     }
-    
-    /* (non-Javadoc)
-     * @see org.apache.commons.fileupload.FileItem#getInputStream()
-     */
+
     @Override
     public InputStream getInputStream() throws IOException {
         throw new UnsupportedOperationException();
+    }
+
+
+    @Override
+    public FileItemHeaders getHeaders() {
+        return headers;
+    }
+
+
+    @Override
+    public void setHeaders(final FileItemHeaders headers) {
+        this.headers = headers;
     }
 }

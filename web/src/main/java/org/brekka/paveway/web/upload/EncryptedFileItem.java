@@ -38,13 +38,13 @@ public class EncryptedFileItem extends AbstractFileItem {
      * Serial UID
      */
     private static final long serialVersionUID = -609134533128275214L;
-    
+
     private transient final FileBuilder fileBuilder;
-    
+
     private transient PartAllocator partAllocator;
-    
+
     private final String originalFileName;
-    
+
     /**
      * @param fieldName
      * @param contentType
@@ -53,31 +53,31 @@ public class EncryptedFileItem extends AbstractFileItem {
      * @param sizeThreshold
      * @param repository
      */
-    public EncryptedFileItem(String fieldName, String contentType, String fileName, FileBuilder fileBuilder,
-            int sizeThreshold, File repository) {
+    public EncryptedFileItem(final String fieldName, final String contentType, final String fileName, final FileBuilder fileBuilder,
+            final int sizeThreshold, final File repository) {
         super(fileName, contentType, fieldName);
         this.fileBuilder = fileBuilder;
         this.originalFileName = fileName;
     }
-    
-    
+
+
     @Override
     public OutputStream getOutputStream() throws IOException {
         partAllocator = fileBuilder.allocatePart();
         OutputStream encryptionOutputStream = partAllocator.getOutputStream();
         return encryptionOutputStream;
     }
-    
-    
+
+
     /**
      * @param req does not have to be set
      */
-    public FileBuilder complete(HttpServletRequest req) {
+    public FileBuilder complete(final HttpServletRequest req) {
         long length;
         String contentRangeStr = null;
         if (req != null) {
             contentRangeStr = req.getHeader(ContentRange.HEADER);
-        } 
+        }
         if (contentRangeStr == null) {
             partAllocator.complete(0);
             length = partAllocator.getLength();
@@ -92,7 +92,7 @@ public class EncryptedFileItem extends AbstractFileItem {
         }
         return null;
     }
-    
+
     /**
      * @return the originalFileName
      */
