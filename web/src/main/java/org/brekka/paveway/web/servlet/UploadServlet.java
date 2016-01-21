@@ -40,7 +40,6 @@ import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.model.UploadPolicy;
-import org.brekka.paveway.core.services.PavewayService;
 import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.session.UploadsContext;
 import org.brekka.paveway.web.support.ContentDisposition;
@@ -55,8 +54,7 @@ import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 public class UploadServlet extends AbstractPavewayServlet {
-    
-    
+
     private static final Log log = LogFactory.getLog(UploadServlet.class);
 
     /**
@@ -89,9 +87,9 @@ public class UploadServlet extends AbstractPavewayServlet {
         if (onBehalfOfAddress != null) {
             remoteAddress = onBehalfOfAddress;
         }
-        
+
         if (log.isInfoEnabled()) {
-            log.info(String.format("Part from '%s', name: '%s' type: '%s', length: %s, range: '%s', path: %s, UA: %s", 
+            log.info(String.format("Part from '%s', name: '%s' type: '%s', length: %s, range: '%s', path: %s, UA: %s",
                     remoteAddress, fileName, contentType, contentLengthStr, contentRangeStr, uri, userAgent));
         }
 
@@ -154,23 +152,26 @@ public class UploadServlet extends AbstractPavewayServlet {
             }
         } catch (Throwable e) {
             throw new PavewayException(PavewayErrorCode.PW800, e, "Upload of '%s' from '%s' encountered problem", fileName, remoteAddress);
+        } finally {
+            syncFilesContext(req);
         }
     }
 
-    /* (non-Javadoc)
-     * @see javax.servlet.http.HttpServlet#doDelete(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)
-     */
     @Override
     protected void doDelete(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        UploadingFilesContext filesContext = getFilesContext(req);
-        String requestUri = req.getRequestURI();
-        String fileName = StringUtils.substringAfterLast(requestUri, "/");
-        fileName = URLDecoder.decode(fileName, "UTF-8");
-        if (!filesContext.discard(fileName)) {
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
+        try {
+            UploadingFilesContext filesContext = getFilesContext(req);
+            String requestUri = req.getRequestURI();
+            String fileName = StringUtils.substringAfterLast(requestUri, "/");
+            fileName = URLDecoder.decode(fileName, "UTF-8");
+            if (!filesContext.discard(fileName)) {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } finally {
+            syncFilesContext(req);
         }
-        resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
     }
 
 
@@ -182,8 +183,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      */
     private UUID processUpload(final String fileName, final ContentRange contentRange, final String contentType, final HttpServletRequest req) throws IOException {
         UploadingFilesContext uploadingFilesContext = getFilesContext(req);
-        PavewayService pavewayService = getPavewayService();
-        FileBuilder fileBuilder = uploadingFilesContext.retrieve(fileName);
+        FileBuilder fileBuilder = uploadingFilesContext.retrieveFile(fileName);
         UploadPolicy policy = uploadingFilesContext.getPolicy();
         if (fileBuilder == null) {
             if (!uploadingFilesContext.isFileSlotAvailable()) {
@@ -196,9 +196,8 @@ public class UploadServlet extends AbstractPavewayServlet {
             if (clusterSize > policy.getClusterSize()) {
                 throw new PavewayException(PavewayErrorCode.PW700, "Cluster size too large, maximum %d, found %d", policy.getClusterSize(), clusterSize);
             }
-            fileBuilder = pavewayService.beginUpload(fileName, contentType, policy);
+            fileBuilder = uploadingFilesContext.fileBuilder(fileName, contentType);
             fileBuilder.setLength(contentRange.getLength());
-            uploadingFilesContext.retain(fileName, fileBuilder);
         }
         PartAllocator partAllocator = fileBuilder.allocatePart();
         try (InputStream is = req.getInputStream(); OutputStream os = partAllocator.getOutputStream()) {
@@ -206,7 +205,7 @@ public class UploadServlet extends AbstractPavewayServlet {
         }
         partAllocator.complete(contentRange.getFirstBytePosition());
         if (fileBuilder.isTransferComplete()) {
-            uploadingFilesContext.transferComplete(fileBuilder);
+            uploadingFilesContext.transferComplete(fileName);
         }
         return fileBuilder.getId();
     }
@@ -219,15 +218,14 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @return
      */
     protected FileItemFactory multipartFactory(final UploadingFilesContext filesContext, final String xFileName) {
-        FileBuilder fileBuilder = filesContext.retrieve(xFileName);
+        FileBuilder fileBuilder = filesContext.retrieveFile(xFileName);
         if (fileBuilder == null) {
             // Allocate a new file
             if (filesContext.isDone()) {
                 throw new PavewayException(PavewayErrorCode.PW701, "This maker has already been completed");
             }
             if (filesContext.isFileSlotAvailable()) {
-                fileBuilder = getPavewayService().beginUpload(xFileName, null, filesContext.getPolicy());
-                filesContext.retain(xFileName, fileBuilder);
+                fileBuilder = filesContext.fileBuilder(xFileName, null);
             } else {
                 throw new PavewayException(PavewayErrorCode.PW700, "Unable to add any more files to this maker");
             }
@@ -250,7 +248,6 @@ public class UploadServlet extends AbstractPavewayServlet {
         ServletFileUpload upload = new ServletFileUpload(factory);
         upload.setFileSizeMax(policy.getMaxFileSize());
 
-        @SuppressWarnings("unchecked")
         List<FileItem> items = upload.parseRequest(req);
         for (FileItem fileItem : items) {
             if (fileItem instanceof EncryptedFileItem) {
@@ -258,7 +255,7 @@ public class UploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    filesContext.transferComplete(fileBuilder);
+                    filesContext.transferComplete(fileBuilder.getFileName());
                 }
             }
         }
@@ -272,5 +269,9 @@ public class UploadServlet extends AbstractPavewayServlet {
         String makerKey = StringUtils.substringBefore(remainder, "/");
         UploadsContext bundleMakerContext = UploadsContext.get(req, true);
         return bundleMakerContext.get(makerKey);
+    }
+
+    private static void syncFilesContext(final HttpServletRequest req) {
+        UploadsContext.sync(req);
     }
 }

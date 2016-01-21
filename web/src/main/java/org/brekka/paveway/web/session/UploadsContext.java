@@ -18,16 +18,20 @@ package org.brekka.paveway.web.session;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.model.UploadedFiles;
+import org.brekka.paveway.web.model.UploadFilesData;
 import org.brekka.paveway.web.model.UploadingFilesContext;
 import org.brekka.paveway.web.support.PolicyHelper;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 /**
  * A context for file uploads that will be bound to a session. Supports multiple separate uploads via "makerkeys" which
@@ -43,59 +47,56 @@ public class UploadsContext implements Serializable {
 
     public static final String SESSION_KEY = UploadsContext.class.getName();
 
-    private transient Map<String, UploadedFilesContextImpl> makers;
+    private final Map<String, UploadFilesData> makers = new ConcurrentHashMap<>();
+
+    private transient ApplicationContext applicationContext;
 
     private final UploadPolicy policy;
+
+    private transient boolean dirty;
 
     private UploadsContext(final UploadPolicy policy) {
         this.policy = policy;
     }
 
     public synchronized boolean contains(final String makerKey) {
-        return map().containsKey(makerKey);
+        return makers.containsKey(makerKey);
     }
 
     public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey) {
         return get(makerKey, null);
     }
 
-    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey, UploadPolicy policy) {
-        if (policy == null) {
-            policy = this.policy;
+    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey, final UploadPolicy uploadPolicy) {
+        Map<String, UploadFilesData> map = makers;
+        UploadFilesData filesData = map.get(makerKey);
+        if (filesData == null) {
+            filesData = new UploadFilesData(makerKey, ObjectUtils.defaultIfNull(uploadPolicy, policy));
+            map.put(makerKey, filesData);
         }
-        Map<String, UploadedFilesContextImpl> map = map();
-        UploadedFilesContextImpl files = map.get(makerKey);
-        if (files == null) {
-            files = new UploadedFilesContextImpl(makerKey, policy, this);
-            map.put(makerKey, files);
-        }
-        return (T) files;
+        return (T) new UploadedFilesContextImpl(filesData, this);
     }
 
     public synchronized void discard() {
-        Collection<UploadedFilesContextImpl> values = map().values();
-        for (UploadedFilesContextImpl files : values) {
-            files.discard();
+        Collection<UploadFilesData> values = makers.values();
+        for (UploadFilesData filesData : values) {
+            new UploadedFilesContextImpl(filesData, this).discard();
         }
-        this.makers.clear();
+        makers.clear();
+        setDirty(true);
     }
 
     synchronized void free(final String makerKey) {
-        this.makers.remove(makerKey);
-    }
-
-    private synchronized Map<String, UploadedFilesContextImpl> map() {
-        Map<String, UploadedFilesContextImpl> map = this.makers;
-        if (map == null) {
-            map = new HashMap<>();
-        }
-        return (this.makers = map);
+        makers.remove(makerKey);
+        setDirty(true);
     }
 
     public static void init(final HttpServletRequest req, final UploadPolicy policy) {
         HttpSession session = req.getSession(true);
         UploadsContext context = new UploadsContext(policy);
+        context.setApplicationContext(WebApplicationContextUtils.getWebApplicationContext(req.getServletContext()));
         session.setAttribute(SESSION_KEY, context);
+
     }
 
     public static UploadsContext get(final HttpServletRequest req, final boolean create) {
@@ -113,10 +114,38 @@ public class UploadsContext implements Serializable {
             context = new UploadsContext(policy);
             session.setAttribute(SESSION_KEY, context);
         }
+        context.setApplicationContext(WebApplicationContextUtils.getWebApplicationContext(session.getServletContext()));
         return context;
+    }
+
+    public static void sync(final HttpServletRequest req) {
+        UploadsContext uploadsContext = get(req, false);
+        if (uploadsContext != null
+                && uploadsContext.isDirty()) {
+            HttpSession session = req.getSession(true);
+            // Force context to be serialized.
+            session.setAttribute(SESSION_KEY, uploadsContext);
+            uploadsContext.setDirty(false);
+        }
+    }
+
+    public void setApplicationContext(final ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
+    ApplicationContext getApplicationContext() {
+        return applicationContext;
     }
 
     public UploadPolicy getDefaultPolicy() {
         return this.policy;
+    }
+
+    public boolean isDirty() {
+        return dirty;
+    }
+
+    public void setDirty(final boolean dirty) {
+        this.dirty = dirty;
     }
 }

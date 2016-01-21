@@ -30,6 +30,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.commons.persistence.model.SnapshotEntity;
@@ -40,7 +41,7 @@ import org.hibernate.annotations.Type;
 /**
  * Persistent storage of a an encrypted uploaded file. The file content will be stored in one or more
  * {@link CryptedPart}s. The name, secret key and MIME-type of the file will be stored by some other system.
- * 
+ *
  * @author Andrew Taylor (andrew@brekka.org)
  */
 @Entity
@@ -78,6 +79,12 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
      */
     @Column(name = "`OriginalLength`")
     private long originalLength;
+
+    /**
+     * Marker to indicate this file has not yet been completed.
+     */
+    @Column(name = "`Staged`")
+    private Boolean staged;
 
     /**
      * The list of parts that make up this file
@@ -163,16 +170,20 @@ public class CryptedFile extends SnapshotEntity<UUID>  {
         this.id = id;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
+    public Boolean getStaged() {
+        return staged;
+    }
+
+    public void setStaged(final Boolean staged) {
+        this.staged = staged;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", id)
                 .append("fileName", fileName).append("mimeType", mimeType).append("compression", compression)
                 .append("originalLength", originalLength)
+                .append("staged", BooleanUtils.isTrue(staged))
                 .append("secretKey", secretKey != null ? "Yes" : "No").append("profile", profile)
                 .append("partsCount", parts != null ? parts.size() : "unknown").append("parts", parts).toString();
     }

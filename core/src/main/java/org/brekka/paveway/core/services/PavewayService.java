@@ -22,6 +22,7 @@ import java.util.UUID;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.CompletableUploadedFile;
 import org.brekka.paveway.core.model.CryptedFile;
+import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
 
@@ -84,4 +85,21 @@ public interface PavewayService {
      *            the file to remove.
      */
     void removeFile(CryptedFile cryptedFile);
+
+    /**
+     * @param cryptedPart
+     */
+    void createPart(CryptedPart cryptedPart);
+
+    /**
+     * @param cryptedFile
+     * @return
+     */
+    boolean isTransferComplete(CryptedFile cryptedFile);
+
+    /**
+     * @param cryptedFile
+     * @param length
+     */
+    void setFileLength(CryptedFile cryptedFile, long length);
 }

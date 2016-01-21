@@ -25,8 +25,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import net.iharder.Base64;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.commons.persistence.model.SnapshotEntity;
@@ -37,11 +35,13 @@ import org.brekka.phoenix.api.SecretKey;
 import org.brekka.phoenix.api.SymmetricCryptoSpec;
 import org.hibernate.annotations.Type;
 
+import net.iharder.Base64;
+
 /**
  * Persistent storage of a part of an uploaded file. All file parts will be encrypted with the same symmetric key though
  * each part gets its own IV. The actual bytes for the part are not stored in this table, instead they are allocated by
  * {@link ResourceStorageService}.
- * 
+ *
  * @author Andrew Taylor (andrew@brekka.org)
  */
 @Entity
@@ -97,6 +97,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
      */
     @Column(name = "`EncryptedChecksum`")
     private byte[] encryptedChecksum;
+
 
     public CryptedFile getFile() {
         return file;
@@ -156,39 +157,21 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         this.id = id;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.brekka.phoenix.api.SymmetricCryptoSpec#getIV()
-     */
     @Override
     public byte[] getIV() {
         return iv;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.brekka.phoenix.api.SymmetricCryptoSpec#getKey()
-     */
     @Override
     public SecretKey getSecretKey() {
         return getFile().getSecretKey();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.brekka.phoenix.api.CryptoSpec#getProfile()
-     */
     @Override
     public CryptoProfile getCryptoProfile() {
         return CryptoProfile.Static.of(getFile().getProfile());
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)

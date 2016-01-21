@@ -17,20 +17,30 @@
 package org.brekka.paveway.web.session;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.CompletableUploadedFile;
+import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.model.UploadedFileInfo;
 import org.brekka.paveway.core.model.UploadedFiles;
+import org.brekka.paveway.core.services.PavewayService;
+import org.brekka.paveway.core.services.ResourceCryptoService;
+import org.brekka.paveway.core.services.ResourceStorageService;
+import org.brekka.paveway.core.services.impl.FileBuilderImpl;
+import org.brekka.paveway.web.model.UploadFileData;
+import org.brekka.paveway.web.model.UploadFilesData;
 import org.brekka.paveway.web.model.UploadingFilesContext;
+import org.brekka.phoenix.api.CryptoProfile;
+import org.brekka.phoenix.api.SecretKey;
+import org.brekka.phoenix.api.services.DigestCryptoService;
+import org.brekka.phoenix.api.services.SymmetricCryptoService;
 
 /**
  * Handles the uploaded files from creation to completion.
@@ -41,146 +51,155 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
 
     private final UploadsContext context;
 
-    private final String makerKey;
-
-    private final UploadPolicy policy;
-
-    private final List<FileBuilder> completed = new ArrayList<>();
-
-    private final Map<String, FileBuilder> inProgress = new HashMap<>();
-    
-    /**
-     * The list of files uploaded
-     */
-    private final List<UploadedFileInfo> files = new ArrayList<>();
-
-    private boolean done = false;
-
-    private final Map<String, Object> attributes = new HashMap<>();
+    private final UploadFilesData filesData;
 
 
-    /**
-     * @param makerKey
-     */
-    public UploadedFilesContextImpl(final String makerKey, final UploadPolicy policy, final UploadsContext context) {
-        this.makerKey = makerKey;
-        this.policy = policy;
+    public UploadedFilesContextImpl(final UploadFilesData filesData, final UploadsContext context) {
+        this.filesData = filesData;
         this.context = context;
     }
 
     @Override
     public synchronized boolean isFileSlotAvailable() {
-        if (this.done) {
+        if (filesData.isDone()) {
             return false;
         }
-        return this.policy.getMaxFiles() > (this.completed.size() + this.inProgress.size());
+        List<UploadFileData> files = filesData.getFiles();
+        return filesData.getUploadPolicy().getMaxFiles() > files.size();
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.FilesContext#retain(java.lang.String, org.brekka.paveway.core.model.FileBuilder)
-     */
+    @Override
+    public FileBuilder fileBuilder(final String filename, final String mimeType) {
+        UploadFileData fileData = fileData(filename);
+
+        FileBuilderImpl fileBuilder;
+
+        if (fileData == null) {
+            PavewayService pavewayService = context.getApplicationContext().getBean(PavewayService.class);
+            fileBuilder = (FileBuilderImpl) pavewayService.beginUpload(filename, mimeType, filesData.getUploadPolicy());
+            CryptedFile cryptedFile = fileBuilder.getCryptedFile();
+            fileData = new UploadFileData(filename, mimeType, cryptedFile.getId(), cryptedFile.getSecretKey().getEncoded());
+            synchronized (filesData.getFiles()) {
+                filesData.getFiles().add(fileData);
+            }
+        } else {
+            fileBuilder = toFileBuilder(fileData);
+        }
+        context.setDirty(true);
+        return fileBuilder;
+    }
+
     @Override
     public void retain(final String fileName, final FileBuilder fileBuilder) {
-        this.inProgress.put(fileName, fileBuilder);
+        FileBuilderImpl xFileBuilder = (FileBuilderImpl) fileBuilder;
+        CryptedFile cryptedFile = xFileBuilder.getCryptedFile();
+        UploadFileData fileData = new UploadFileData(cryptedFile.getFileName(), cryptedFile.getMimeType(), cryptedFile.getId(),
+                cryptedFile.getSecretKey().getEncoded());
+        synchronized (filesData.getFiles()) {
+            filesData.getFiles().add(fileData);
+        }
+        context.setDirty(true);
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.FilesContext#retrieve(java.lang.String)
-     */
     @Override
-    public FileBuilder retrieve(final String fileName) {
-        return this.inProgress.get(fileName);
+    public FileBuilder retrieveFile(final String fileName) {
+        FileBuilder fileBuilder = null;
+        UploadFileData fileData = fileData(fileName);
+        if (fileData != null) {
+            fileBuilder = toFileBuilder(fileData);
+        }
+        return fileBuilder;
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.FilesContext#complete(org.brekka.paveway.core.model.FileBuilder)
-     */
     @Override
-    public void transferComplete(final FileBuilder fileBuilder) {
-        this.inProgress.remove(fileBuilder.getFileName());
-        this.completed.add(fileBuilder);
+    public void transferComplete(final String fileName) {
+        UploadFileData fileData = fileData(fileName);
+        if (fileData != null) {
+            fileData.setComplete(true);
+            context.setDirty(true);
+        } else {
+            throw new IllegalArgumentException(String.format("No file '%s' to complete", fileName));
+        }
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.FilesContext#getPolicy()
-     */
-    @Override
-    public UploadPolicy getPolicy() {
-        return this.policy;
-    }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.session.Files#isDone()
-     */
-    @Override
-    public boolean isDone() {
-        return this.done;
-    }
-
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.session.Files#previewCompleted()
-     */
     @Override
     public List<UploadedFileInfo> previewReady() {
-        return new ArrayList<UploadedFileInfo>(this.completed);
+        List<UploadedFileInfo> infos = new ArrayList<>();
+        for (UploadFileData fileData : filesData.getFiles()) {
+            if (fileData.isComplete()) {
+                infos.add(fileData);
+            }
+        }
+        return infos;
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.session.Files#complete()
-     */
     @Override
     public synchronized List<CompletableUploadedFile> uploadComplete() {
-        // Deallocate the files that were never completed
-        Collection<FileBuilder> values = this.inProgress.values();
-        discardAll(values);
-        this.inProgress.clear();
-
-        List<CompletableUploadedFile> fileBuilders = new ArrayList<CompletableUploadedFile>(this.completed);
-        // Make the uploaded file metadata available for reading.
-        files.addAll(fileBuilders);
-        this.completed.clear();
-        this.done = true;
-        this.context.free(this.makerKey);
+        List<CompletableUploadedFile> fileBuilders = new ArrayList<>();
+        List<UploadFileData> files = filesData.getFiles();
+        synchronized (files) {
+            Iterator<UploadFileData> fileIterator = files.iterator();
+            while (fileIterator.hasNext()) {
+                UploadFileData uploadFileData = fileIterator.next();
+                FileBuilderImpl fileBuilder = toFileBuilder(uploadFileData);
+                if (uploadFileData.isComplete()) {
+                    fileBuilders.add(fileBuilder);
+                } else {
+                    fileBuilder.discard();
+                    fileIterator.remove();
+                }
+            }
+        }
+        filesData.setDone(true);
+        context.free(filesData.getMakerKey());
         return fileBuilders;
     }
 
-    /**
-     * @return the makerKey
-     */
     public String getKey() {
-        return this.makerKey;
+        return filesData.getMakerKey();
     }
 
     @Override
     public List<UploadedFileInfo> files() {
-        return files;
+        return previewReady();
     }
 
+    @Override
+    public boolean isDone() {
+        return filesData.isDone();
+    }
+
+    @Override
+    public UploadPolicy getPolicy() {
+        return filesData.getUploadPolicy();
+    }
 
     @Override
     public synchronized void discard() {
-        Collection<FileBuilder> values = this.inProgress.values();
-        discardAll(values);
-        this.inProgress.clear();
-        discardAll(this.completed);
-        this.completed.clear();
+        List<UploadFileData> files = filesData.getFiles();
+        synchronized (files) {
+            Iterator<UploadFileData> fileIterator = files.iterator();
+            while (fileIterator.hasNext()) {
+                UploadFileData uploadFileData = fileIterator.next();
+                FileBuilderImpl fileBuilder = toFileBuilder(uploadFileData);
+                fileBuilder.discard();
+                fileIterator.remove();
+            }
+        }
+        context.setDirty(true);
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.model.Files#addAttribute(java.lang.String, java.lang.Object)
-     */
     @Override
     public void addAttribute(final String key, final Object value) {
-        this.attributes.put(key, value);
+        filesData.getAttributes().put(key, value);
+        context.setDirty(true);
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.model.Files#getAttribute(java.lang.String)
-     */
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getAttribute(final String key, final Class<T> type) {
-        Object object = this.attributes.get(key);
+        Object object = filesData.getAttributes().get(key);
         if (object == null) {
             return null;
         }
@@ -192,57 +211,75 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
                 getKey(), key, object.getClass().getName(), type.getName());
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.model.Files#removeAttribute(java.lang.String)
-     */
     @Override
     public void removeAttribute(final String key) {
-        this.attributes.remove(key);
+        filesData.getAttributes().remove(key);
+        context.setDirty(true);
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.model.UploadedFiles#renameFileTo(java.util.UUID, java.lang.String)
-     */
     @Override
     public void renameFileTo(final UUID id, final String name) {
-        for (FileBuilder fileBuilder : this.completed) {
-            if (fileBuilder.getId().equals(id)) {
+        for (UploadFileData fileData : filesData.getFiles()) {
+            if (fileData.getId().equals(id)) {
+                FileBuilderImpl fileBuilder = toFileBuilder(fileData);
                 fileBuilder.renameTo(name);
+                context.setDirty(true);
                 break;
             }
         }
     }
 
-    private static void discardAll(final Collection<FileBuilder> fileBuilders) {
-        for (FileBuilder fileBuilder : fileBuilders) {
-            fileBuilder.discard();
-        }
-    }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.web.model.UploadingFilesContext#discard(org.brekka.paveway.core.model.FileBuilder)
-     */
     @Override
     public synchronized boolean discard(final String fileName) {
-        FileBuilder found = null;
-        for (FileBuilder fileBuilder : this.completed) {
-            if (fileBuilder.getFileName().equals(fileName)) {
-                found = fileBuilder;
-                break;
+        UploadFileData fileData = fileData(fileName);
+        if (fileData != null) {
+            FileBuilderImpl fileBuilder = toFileBuilder(fileData);
+            fileBuilder.discard();
+            synchronized (filesData.getFiles()) {
+                filesData.getFiles().remove(fileData);
             }
-        }
-        for (FileBuilder fileBuilder : this.inProgress.values()) {
-            if (fileBuilder.getFileName().equals(fileName)) {
-                found = fileBuilder;
-                break;
-            }
-        }
-        if (found != null) {
-            boolean removed = this.completed.remove(found);
-            removed |= this.inProgress.remove(found.getFileName()) != null;
-            found.discard();
-            return removed;
+            context.setDirty(true);
+            return true;
         }
         return false;
+    }
+
+    /**
+     * @param filename
+     * @return
+     */
+    private UploadFileData fileData(final String filename) {
+        UploadFileData fileData = null;
+        List<UploadFileData> files = filesData.getFiles();
+        for (UploadFileData uploadFileData : files) {
+            if (Objects.equals(uploadFileData.getFileName(), filename)) {
+                fileData = uploadFileData;
+                break;
+            }
+        }
+        return fileData;
+    }
+
+    private FileBuilderImpl toFileBuilder(final UploadFileData fileData) {
+        PavewayService pavewayService = context.getApplicationContext().getBean(PavewayService.class);
+        SymmetricCryptoService symmetricCryptoService = context.getApplicationContext().getBean(SymmetricCryptoService.class);
+        DigestCryptoService digestCryptoService = context.getApplicationContext().getBean(DigestCryptoService.class);
+        ResourceCryptoService resourceCryptoService = context.getApplicationContext().getBean(ResourceCryptoService.class);
+        ResourceStorageService resourceStorageService = context.getApplicationContext().getBean(ResourceStorageService.class);
+
+        CryptedFile cryptedFile = pavewayService.retrieveCryptedFileById(fileData.getCryptedFileId());
+        if (cryptedFile == null) {
+            throw new IllegalStateException(String.format("Crypted file '%s' not found for '%s'",
+                    fileData.getCryptedFileId(), fileData.getFileName()));
+        }
+        cryptedFile.setMimeType(fileData.getMimeType());
+        cryptedFile.setFileName(fileData.getFileName());
+        CryptoProfile cryptoProfile = CryptoProfile.Static.of(cryptedFile.getProfile());
+        SecretKey secretKey = symmetricCryptoService.toSecretKey(fileData.getSecretKey(), cryptoProfile);
+        cryptedFile.setSecretKey(secretKey);
+
+        return new FileBuilderImpl(cryptedFile, cryptoProfile, pavewayService, digestCryptoService,
+                resourceCryptoService, resourceStorageService, filesData.getUploadPolicy());
     }
 }

@@ -33,6 +33,9 @@ public interface UploadingFilesContext {
      */
     UploadPolicy getPolicy();
 
+
+    FileBuilder fileBuilder(String filename, String mimeType);
+
     /**
      * Bind the file builder to this context.
      *
@@ -44,21 +47,12 @@ public interface UploadingFilesContext {
     void retain(String name, FileBuilder fileBuilder);
 
     /**
-     * Retrieve a file previously retained under the name <code>name</code>
+     * Mark the file as having had all its parts transferred.
      *
-     * @param name
-     *            the name the {@link FileBuilder} was previously bound under.
-     * @return the {@link FileBuilder} or null if it cannot be found.
+     * @param fileName
+     *            the now fully transferred file.
      */
-    FileBuilder retrieve(String name);
-
-    /**
-     * Mark this {@link FileBuilder} as having had all its parts transferred.
-     *
-     * @param fileBuilder
-     *            the now fully transferred {@link FileBuilder}.
-     */
-    void transferComplete(FileBuilder fileBuilder);
+    void transferComplete(final String fileName);
 
     /**
      * Can another file be added?
@@ -87,4 +81,12 @@ public interface UploadingFilesContext {
      * @return true if the file was found and removed.
      */
     boolean discard(String fileName);
+
+
+    /**
+     * @param fileName
+     * @return
+     */
+    FileBuilder retrieveFile(String fileName);
+
 }

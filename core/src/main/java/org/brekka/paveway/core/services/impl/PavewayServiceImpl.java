@@ -44,6 +44,7 @@ import org.brekka.phoenix.api.services.CryptoProfileService;
 import org.brekka.phoenix.api.services.DigestCryptoService;
 import org.brekka.phoenix.api.services.SymmetricCryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,6 @@ import org.springframework.transaction.annotation.Transactional;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 @Service
-@Transactional
 public class PavewayServiceImpl implements PavewayService {
 
     @Autowired
@@ -78,10 +78,11 @@ public class PavewayServiceImpl implements PavewayService {
     @Autowired
     private CryptedPartDAO cryptedPartDAO;
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.services.PavewayService#begin(java.lang.String)
-     */
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Override
+    @Transactional(propagation=Propagation.REQUIRES_NEW)
     public FileBuilder beginUpload(final String fileName, final String mimeType, final UploadPolicy uploadPolicy) {
         Compression compression = Compression.NONE;
         // TODO more mime types that can be compressed
@@ -100,29 +101,31 @@ public class PavewayServiceImpl implements PavewayService {
         cryptedFile.setMimeType(mimeType);
         SecretKey secretKey = this.symmetricCryptoService.createSecretKey(cryptoProfile);
         cryptedFile.setSecretKey(secretKey);
+        cryptedFile.setStaged(Boolean.TRUE);
+        cryptedFileDAO.create(cryptedFile);
 
-        return new FileBuilderImpl(cryptedFile, cryptoProfile, this.digestCryptoService,
+        return new FileBuilderImpl(cryptedFile, cryptoProfile, applicationContext.getBean(PavewayService.class), this.digestCryptoService,
                 this.resourceCryptoService, this.resourceStorageService, uploadPolicy);
     }
 
     @Override
-    @Transactional(propagation=Propagation.REQUIRED)
+    @Transactional(propagation=Propagation.REQUIRES_NEW)
+    public void createPart(final CryptedPart cryptedPart) {
+        cryptedPartDAO.create(cryptedPart);
+    }
+
+    @Override
+    @Transactional()
     public CryptedFile complete(final CompletableUploadedFile completableFile) {
         FileBuilderImpl fileBuilderImpl = narrow(completableFile);
-        CryptedFile cryptedFile = fileBuilderImpl.getCryptedFile();
-        List<CryptedPart> parts = cryptedFile.getParts();
-        for (CryptedPart cryptedPart : parts) {
-            this.cryptedPartDAO.create(cryptedPart);
-        }
-        this.cryptedFileDAO.create(cryptedFile);
+        CryptedFile cryptedFile = cryptedFileDAO.retrieveById(fileBuilderImpl.getCryptedFile().getId());
+        cryptedFile.setStaged(null);
+        this.cryptedFileDAO.update(cryptedFile);
         return cryptedFile;
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.services.PavewayService#removeFile(java.util.UUID)
-     */
     @Override
-    @Transactional(propagation=Propagation.REQUIRED)
+    @Transactional()
     public void removeFile(final CryptedFile cryptedFile) {
         CryptedFile managedCryptedFile = this.cryptedFileDAO.retrieveById(cryptedFile.getId());
         List<CryptedPart> parts = managedCryptedFile.getParts();
@@ -133,16 +136,44 @@ public class PavewayServiceImpl implements PavewayService {
         this.cryptedFileDAO.delete(managedCryptedFile.getId());
     }
 
-    /* (non-Javadoc)
-     * @see org.brekka.paveway.core.services.PavewayService#retrieveCryptedFileById(java.util.UUID)
-     */
     @Override
+    @Transactional()
+    public void setFileLength(final CryptedFile cryptedFile, final long length) {
+        CryptedFile managedCryptedFile = this.cryptedFileDAO.retrieveById(cryptedFile.getId());
+        managedCryptedFile.setOriginalLength(length);
+        cryptedFileDAO.update(managedCryptedFile);
+    }
+
+    @Override
+    @Transactional(propagation=Propagation.REQUIRES_NEW)
+    public boolean isTransferComplete(final CryptedFile cryptedFile) {
+        CryptedFile file = cryptedFileDAO.retrieveById(cryptedFile.getId());
+        boolean complete = false;
+        List<CryptedPart> parts = file.getParts();
+        if (parts.size() == 1) {
+            CryptedPart cryptedPart = parts.get(0);
+            complete = (cryptedPart.getLength() == file.getOriginalLength());
+        } else {
+            List<CryptedPart> sortedParts = PavewayServiceImpl.sortByOffset(parts);
+            long length = 0;
+            for (CryptedPart cryptedPart : sortedParts) {
+                if (length == cryptedPart.getOffset()) {
+                    length += cryptedPart.getLength();
+                }
+            }
+            complete = (length == file.getOriginalLength());
+        }
+        return complete;
+    }
+
+    @Override
+    @Transactional(readOnly=true)
     public CryptedFile retrieveCryptedFileById(final UUID id) {
         return this.cryptedFileDAO.retrieveById(id);
     }
 
     @Override
-    @Transactional(propagation=Propagation.REQUIRED)
+    @Transactional()
     public InputStream download(final CryptedFile cryptedFile) {
         CryptedFile managedFile = this.cryptedFileDAO.retrieveById(cryptedFile.getId());
         if (cryptedFile.getSecretKey() == null) {
