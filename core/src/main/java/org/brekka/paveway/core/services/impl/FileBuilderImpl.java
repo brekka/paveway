@@ -80,6 +80,7 @@ public class FileBuilderImpl implements FileBuilder {
     @Override
     public void setLength(final long length) {
         pavewayService.setFileLength(cryptedFile, length);
+        cryptedFile.setOriginalLength(length);
     }
 
     @Override

@@ -118,8 +118,12 @@ public class PavewayServiceImpl implements PavewayService {
     @Transactional()
     public CryptedFile complete(final CompletableUploadedFile completableFile) {
         FileBuilderImpl fileBuilderImpl = narrow(completableFile);
+        CryptedFile original = fileBuilderImpl.getCryptedFile();
         CryptedFile cryptedFile = cryptedFileDAO.retrieveById(fileBuilderImpl.getCryptedFile().getId());
         cryptedFile.setStaged(null);
+        cryptedFile.setSecretKey(original.getSecretKey());
+        cryptedFile.setMimeType(original.getMimeType());
+        cryptedFile.setFileName(original.getFileName());
         this.cryptedFileDAO.update(cryptedFile);
         return cryptedFile;
     }
