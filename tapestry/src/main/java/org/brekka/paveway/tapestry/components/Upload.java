@@ -180,6 +180,8 @@ public class Upload extends AbstractField {
         this.formSupport.storeAndExecute(this, new Setup(keyControlName));
         this.formSupport.store(this, new UploadProcessSubmission());
         this.outerId = this.javaScriptSupport.allocateClientId(getClientId() + "_outer");
+        HttpServletRequest req = this.requestGlobals.getHTTPServletRequest();
+        UploadsContext.init(req, uploadPolicy);
     }
 
     /**
@@ -229,7 +231,7 @@ public class Upload extends AbstractField {
         UploadsContext uploadContext = UploadsContext.get(req, true);
         T files = null;
         if (uploadContext != null) {
-            files = uploadContext.get(key, this.uploadPolicy);
+            files = uploadContext.get(key);
         }
 
         if (files == null) {

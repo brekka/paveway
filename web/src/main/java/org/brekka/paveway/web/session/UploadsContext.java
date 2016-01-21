@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.brekka.paveway.core.model.UploadPolicy;
 import org.brekka.paveway.core.model.UploadedFiles;
 import org.brekka.paveway.web.model.UploadFilesData;
@@ -64,14 +63,10 @@ public class UploadsContext implements Serializable {
     }
 
     public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey) {
-        return get(makerKey, null);
-    }
-
-    public synchronized <T extends UploadingFilesContext & UploadedFiles> T get(final String makerKey, final UploadPolicy uploadPolicy) {
         Map<String, UploadFilesData> map = makers;
         UploadFilesData filesData = map.get(makerKey);
         if (filesData == null) {
-            filesData = new UploadFilesData(makerKey, ObjectUtils.defaultIfNull(uploadPolicy, policy));
+            filesData = new UploadFilesData(makerKey, policy);
             map.put(makerKey, filesData);
         }
         return (T) new UploadedFilesContextImpl(filesData, this);
@@ -93,10 +88,12 @@ public class UploadsContext implements Serializable {
 
     public static void init(final HttpServletRequest req, final UploadPolicy policy) {
         HttpSession session = req.getSession(true);
-        UploadsContext context = new UploadsContext(policy);
-        context.setApplicationContext(WebApplicationContextUtils.getWebApplicationContext(req.getServletContext()));
-        session.setAttribute(SESSION_KEY, context);
-
+        Object existing = session.getAttribute(SESSION_KEY);
+        if (existing != null) {
+            UploadsContext context = new UploadsContext(policy);
+            context.setApplicationContext(WebApplicationContextUtils.getWebApplicationContext(req.getServletContext()));
+            session.setAttribute(SESSION_KEY, context);
+        }
     }
 
     public static UploadsContext get(final HttpServletRequest req, final boolean create) {
