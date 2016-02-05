@@ -24,9 +24,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
-import org.brekka.paveway.core.model.ByteSequence;
 import org.brekka.paveway.core.model.CryptedFile;
-import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.FileBuilder;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.model.ResourceEncryptor;
@@ -60,6 +58,7 @@ public class FileBuilderImpl implements FileBuilder {
 
     private final UploadPolicy policy;
 
+
     public FileBuilderImpl(final CryptedFile cryptedFile, final CryptoProfile cryptoProfile, final PavewayService pavewayService,
             final DigestCryptoService digestCryptoService, final ResourceCryptoService resourceCryptoService,
             final ResourceStorageService resourceStorageService, final UploadPolicy policy) {
@@ -74,7 +73,7 @@ public class FileBuilderImpl implements FileBuilder {
 
     @Override
     public UUID getId() {
-        return this.cryptedFile.getId();
+        return cryptedFile.getId();
     }
 
     @Override
@@ -94,35 +93,22 @@ public class FileBuilderImpl implements FileBuilder {
     }
 
     @Override
-    public void renameTo(final String name) {
-        if (!isTransferComplete()) {
-            throw new IllegalStateException("A file can only be renamed once it has been completed");
-        }
-        this.cryptedFile.setFileName(name);
-    }
-
-    @Override
     public String getMimeType() {
         return this.cryptedFile.getMimeType();
     }
 
     @Override
     public PartAllocator allocatePart() {
-        if (this.uploadedBytesCount.longValue() >= this.policy.getMaxFileSize()) {
+        if (uploadedBytesCount.longValue() >= this.policy.getMaxFileSize()) {
             throw new PavewayException(PavewayErrorCode.PW700, "File has grown too large");
         }
-        CryptedPart part = new CryptedPart();
-        UUID partId = UUID.randomUUID();
-        part.setId(partId);
-        part.setFile(this.cryptedFile);
-        ByteSequence partDestination = this.resourceStorageService.allocate(partId);
-        ResourceEncryptor encryptor = this.resourceCryptoService.encryptor(this.cryptedFile.getSecretKey(), this.cryptedFile.getCompression());
-        StreamCryptor<OutputStream, DigestResult> digester = this.digestCryptoService.outputDigester(this.cryptoProfile);
-        return new PartAllocatorImpl(encryptor, pavewayService, part, digester, partDestination, this.uploadedBytesCount);
+        ResourceEncryptor encryptor = resourceCryptoService.encryptor(this.cryptedFile.getSecretKey(), cryptedFile.getCompression());
+        StreamCryptor<OutputStream, DigestResult> digester = digestCryptoService.outputDigester(cryptoProfile);
+        return new PartAllocatorImpl(cryptedFile, encryptor, pavewayService, resourceStorageService, digester, uploadedBytesCount);
     }
 
     @Override
-    public synchronized boolean isTransferComplete() {
+    public boolean isTransferComplete() {
         return pavewayService.isTransferComplete(cryptedFile);
     }
 

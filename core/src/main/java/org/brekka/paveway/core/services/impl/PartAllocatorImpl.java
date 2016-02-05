@@ -18,14 +18,20 @@ package org.brekka.paveway.core.services.impl;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.output.CountingOutputStream;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.model.ByteSequence;
+import org.brekka.paveway.core.model.CryptedFile;
 import org.brekka.paveway.core.model.CryptedPart;
 import org.brekka.paveway.core.model.PartAllocator;
 import org.brekka.paveway.core.model.ResourceEncryptor;
 import org.brekka.paveway.core.services.PavewayService;
+import org.brekka.paveway.core.services.ResourceStorageService;
 import org.brekka.phoenix.api.DigestResult;
 import org.brekka.phoenix.api.StreamCryptor;
 
@@ -35,6 +41,8 @@ import org.brekka.phoenix.api.StreamCryptor;
  */
 public class PartAllocatorImpl implements PartAllocator {
 
+    private static final Log log = LogFactory.getLog(PartAllocatorImpl.class);
+
     private final ResourceEncryptor resourceEncryptor;
 
     private final PavewayService pavewayService;
@@ -42,6 +50,8 @@ public class PartAllocatorImpl implements PartAllocator {
     private final CryptedPart cryptedPart;
 
     private final StreamCryptor<OutputStream, DigestResult> digester;
+
+    private final ResourceStorageService resourceStorageService;
 
     /**
      * This is where the encrypted data will be stored.
@@ -53,13 +63,19 @@ public class PartAllocatorImpl implements PartAllocator {
     private CountingOutputStream counter;
 
 
-    public PartAllocatorImpl(final ResourceEncryptor resourceEncryptor, final PavewayService pavewayService, final CryptedPart cryptedPart,
-            final StreamCryptor<OutputStream, DigestResult> digester, final ByteSequence partDestination, final AtomicLong uploadedBytesCount) {
+    public PartAllocatorImpl(final CryptedFile cryptedFile, final ResourceEncryptor resourceEncryptor, final PavewayService pavewayService,
+            final ResourceStorageService resourceStorageService, final StreamCryptor<OutputStream, DigestResult> digester,
+            final AtomicLong uploadedBytesCount) {
+        CryptedPart part = new CryptedPart();
+        part.setId(UUID.randomUUID());
+        part.setFile(cryptedFile);
+
+        this.cryptedPart = part;
+        this.partDestination = resourceStorageService.allocate(part.getId());
         this.resourceEncryptor = resourceEncryptor;
         this.pavewayService = pavewayService;
-        this.cryptedPart = cryptedPart;
+        this.resourceStorageService = resourceStorageService;
         this.digester = digester;
-        this.partDestination = partDestination;
         this.uploadedBytesCount = uploadedBytesCount;
     }
 
@@ -78,8 +94,18 @@ public class PartAllocatorImpl implements PartAllocator {
         cryptedPart.setEncryptedChecksum(resourceEncryptor.getDigestResult().getDigest());
         cryptedPart.setLength(counter.getByteCount());
         cryptedPart.setOffset(offset);
+        StopWatch sw = new StopWatch();
+        sw.start();
         pavewayService.createPart(cryptedPart);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Part offset %d created in %d ms for file '%s'", offset, sw.getTime(), cryptedPart.getFile().getFileName()));
+        }
         uploadedBytesCount.addAndGet(counter.getByteCount());
+    }
+
+    @Override
+    public void discard() {
+        resourceStorageService.remove(cryptedPart.getId());
     }
 
     @Override
@@ -100,5 +126,4 @@ public class PartAllocatorImpl implements PartAllocator {
     CryptedPart getCryptedPart() {
         return cryptedPart;
     }
-
 }

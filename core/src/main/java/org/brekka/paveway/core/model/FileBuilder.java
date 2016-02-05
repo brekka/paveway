@@ -43,10 +43,4 @@ public interface FileBuilder extends CompletableUploadedFile {
      * @return true if all parts have been uploaded
      */
     boolean isTransferComplete();
-
-    /**
-     * Provide an opportunity to rename the file after it has been completed.
-     * @param name
-     */
-    void renameTo(String name);
 }

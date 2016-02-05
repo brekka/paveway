@@ -21,6 +21,7 @@ import java.io.File;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.model.FileBuilder;
@@ -29,19 +30,19 @@ import org.brekka.paveway.core.services.PavewayService;
 
 /**
  * {@link FileItemFactory} that creates {@link EncryptedFileItem}s.
- * 
+ *
  * @author Andrew Taylor
  */
 public class EncryptedFileItemFactory extends DiskFileItemFactory {
-    
+
     private static final Log log = LogFactory.getLog(EncryptedFileItemFactory.class);
 
     protected final transient PavewayService pavewayService;
-    
+
     private final UploadPolicy uploadPolicy;
-    
-    public EncryptedFileItemFactory(int sizeThreshold, File repository, 
-            PavewayService pavewayService, UploadPolicy uploadPolicy) {
+
+    public EncryptedFileItemFactory(final int sizeThreshold, final File repository,
+            final PavewayService pavewayService, final UploadPolicy uploadPolicy) {
         super(sizeThreshold, repository);
         this.pavewayService = pavewayService;
         this.uploadPolicy = uploadPolicy;
@@ -51,18 +52,19 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
      * Exactly the same as the supertype, except returns a {@link EncryptedFileItem}.
      */
     @Override
-    public FileItem createItem(String fieldName, String contentType, boolean isFormField, String fileName) {
+    public FileItem createItem(final String fieldName, final String contentType, final boolean isFormField, final String fileName) {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, fileName);
         }
-        if (log.isInfoEnabled()) {
-            log.info(String.format("Create file item '%s' of type '%s' from field '%s'", 
-                    fileName, contentType, fieldName));
-        }
+        StopWatch sw = new StopWatch();
+        sw.start();
         FileBuilder fileBuilder = pavewayService.beginUpload(fileName, contentType, uploadPolicy);
-        EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType, 
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Created file item '%s' of type '%s' from field '%s' in %d ms",
+                    fileName, contentType, fieldName, sw.getTime()));
+        }
+        EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType,
                 fileName, fileBuilder, getSizeThreshold(), getRepository());
         return result;
     }
-
 }

@@ -30,16 +30,21 @@ public interface PartAllocator {
      * @return
      */
     OutputStream getOutputStream() throws IOException;
-    
+
     /**
      * The part length (of the unencrypted). This is a count of the actual bytes received
      * @return
      */
     long getLength();
-    
-    
+
+
     /**
      * Complete the allocation
      */
     void complete(long offset);
+
+    /**
+     * Part allocation aborted, discard any bytes written
+     */
+    void discard();
 }

@@ -16,9 +16,12 @@
 
 package org.brekka.paveway.web.servlet;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.List;
 import java.util.UUID;
@@ -32,7 +35,9 @@ import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.PavewayErrorCode;
@@ -64,6 +69,8 @@ public class UploadServlet extends AbstractPavewayServlet {
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        StopWatch sw = new StopWatch();
+        sw.start();
         UploadingFilesContext filesContext = getFilesContext(req);
 
         String fileName = null;
@@ -83,14 +90,9 @@ public class UploadServlet extends AbstractPavewayServlet {
         String remoteAddress = req.getRemoteAddr();
         String onBehalfOfAddress = req.getHeader("X-Forwarded-For");
         String userAgent = req.getHeader("User-Agent");
-        String uri = req.getRequestURI();
+        String user = req.getRemoteUser();
         if (onBehalfOfAddress != null) {
             remoteAddress = onBehalfOfAddress;
-        }
-
-        if (log.isInfoEnabled()) {
-            log.info(String.format("Part from '%s', name: '%s' type: '%s', length: %s, range: '%s', path: %s, UA: %s",
-                    remoteAddress, fileName, contentType, contentLengthStr, contentRangeStr, uri, userAgent));
         }
 
         if (contentType == null) {
@@ -99,6 +101,8 @@ public class UploadServlet extends AbstractPavewayServlet {
         }
 
         FileItemFactory factory;
+        ContentRange contentRange = null;
+        String responseString = null;
         try {
             if (contentType.toLowerCase().startsWith("multipart/form-data")) {
                 if (fileName == null) {
@@ -107,14 +111,15 @@ public class UploadServlet extends AbstractPavewayServlet {
                     if (log.isInfoEnabled()) {
                         log.info(String.format("Handling multipart data from %s", remoteAddress));
                     }
-                    handle(factory, filesContext, req, resp);
+                    handle(factory, filesContext, req);
                 } else {
                     throw new UnsupportedOperationException("This mode is no longer supported");
                 }
             } else {
-                ContentRange contentRange;
                 if (contentRangeStr == null && contentLengthStr == null) {
-                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Content-Range or Content-Length must be specified");
+                    resp.setContentType("text/plain");
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    responseString = "Content-Range or Content-Length must be specified";
                     return;
                 } else if (contentRangeStr != null) {
                     contentRange = ContentRange.valueOf(contentRangeStr);
@@ -122,20 +127,21 @@ public class UploadServlet extends AbstractPavewayServlet {
                     Long contentLength = Long.valueOf(contentLengthStr);
                     contentRange = new ContentRange(0, contentLength.longValue() - 1, contentLength.longValue());
                 } else {
-                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Only one of Content-Range or Content-Length must be specified");
+                    resp.setContentType("text/plain");
+                    responseString = "Only one of Content-Range or Content-Length must be specified";
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     return;
                 }
                 UUID id = processUpload(fileName, contentRange, contentType, req);
-                if (log.isInfoEnabled()) {
-                    log.info(String.format("Upload of '%s' from '%s' processed and assigned id %s", fileName, remoteAddress, id));
-                }
                 if (accept != null
                         && accept.contains("application/json")) {
                     resp.setContentType("application/json");
-                    resp.getWriter().printf("{\"id\": \"%s\"}", id);
+                    responseString = format("{\"id\": \"%s\"}", id);
+                } else {
+                    resp.setContentType("text/plain");
+                    responseString = id.toString();
                 }
             }
-            resp.setStatus(HttpServletResponse.SC_OK);
         } catch (PavewayException e) {
             if (log.isWarnEnabled()) {
                 log.warn(String.format("Upload of '%s' from '%s' encountered problem", fileName, remoteAddress), e);
@@ -154,6 +160,18 @@ public class UploadServlet extends AbstractPavewayServlet {
             throw new PavewayException(PavewayErrorCode.PW800, e, "Upload of '%s' from '%s' encountered problem", fileName, remoteAddress);
         } finally {
             syncFilesContext(req);
+        }
+        if (responseString != null) {
+            resp.setStatus(HttpServletResponse.SC_OK);
+            try (Writer writer = resp.getWriter()) {
+                writer.write(responseString);
+            }
+        } else {
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        }
+        if (log.isInfoEnabled()) {
+            log.info(String.format("File '%s' [%s] in %d ms for %s/%s, UA: %s",
+                    fileName, contentRange, sw.getTime(), user, remoteAddress, userAgent));
         }
     }
 
@@ -182,6 +200,8 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param req
      */
     private UUID processUpload(final String fileName, final ContentRange contentRange, final String contentType, final HttpServletRequest req) throws IOException {
+        StopWatch sw = new StopWatch();
+        sw.start();
         UploadingFilesContext uploadingFilesContext = getFilesContext(req);
         FileBuilder fileBuilder = uploadingFilesContext.retrieveFile(fileName);
         UploadPolicy policy = uploadingFilesContext.getPolicy();
@@ -200,12 +220,25 @@ public class UploadServlet extends AbstractPavewayServlet {
             fileBuilder.setLength(contentRange.getLength());
         }
         PartAllocator partAllocator = fileBuilder.allocatePart();
-        try (InputStream is = req.getInputStream(); OutputStream os = partAllocator.getOutputStream()) {
-            IOUtils.copy(is, os);
+        StopWatch transferSw = new StopWatch();
+        transferSw.start();
+        try (InputStream is = new BoundedInputStream(req.getInputStream(), contentRange.getLength());
+                OutputStream os = partAllocator.getOutputStream()) {
+            IOUtils.copyLarge(is, os);
+        } catch (RuntimeException | IOException e) {
+            partAllocator.discard();
+            throw e;
         }
+        transferSw.stop();
         partAllocator.complete(contentRange.getFirstBytePosition());
+        StopWatch checkSw = new StopWatch();
+        checkSw.start();
         if (fileBuilder.isTransferComplete()) {
-            uploadingFilesContext.transferComplete(fileName);
+            uploadingFilesContext.transferComplete(fileName, fileBuilder.getLength());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Process '%s' - overall: %d ms, transfer: %d ms, check: %d ms",
+                    fileName, sw.getTime(), transferSw.getTime(), checkSw.getTime()));
         }
         return fileBuilder.getId();
     }
@@ -241,7 +274,7 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param upload
      *
      */
-    private static void handle(final FileItemFactory factory, final UploadingFilesContext filesContext, final HttpServletRequest req, final HttpServletResponse resp)
+    private static void handle(final FileItemFactory factory, final UploadingFilesContext filesContext, final HttpServletRequest req)
                 throws FileUploadException {
         UploadPolicy policy = filesContext.getPolicy();
         // Create a new file upload handler
@@ -255,7 +288,7 @@ public class UploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    filesContext.transferComplete(fileBuilder.getFileName());
+                    filesContext.transferComplete(fileBuilder.getFileName(), fileBuilder.getLength());
                 }
             }
         }
@@ -272,6 +305,11 @@ public class UploadServlet extends AbstractPavewayServlet {
     }
 
     private static void syncFilesContext(final HttpServletRequest req) {
+        StopWatch sw = new StopWatch();
+        sw.start();
         UploadsContext.sync(req);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Sync files context took %d ms", sw.getTime()));
+        }
     }
 }

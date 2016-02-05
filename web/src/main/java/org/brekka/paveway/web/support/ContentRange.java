@@ -25,12 +25,12 @@ import java.util.regex.Pattern;
  *
  * @author Andrew Taylor (andrew@brekka.org)
  */
-public class ContentRange implements Serializable {
+public final class ContentRange implements Serializable {
     /**
      * The HTTP header key for Content range.
      */
     public static final String HEADER = "Content-Range";
-    
+
     /**
      * Serial UID
      */
@@ -45,28 +45,28 @@ public class ContentRange implements Serializable {
      * The index of the first byte in this range
      */
     private final long firstBytePosition;
-    
+
     /**
      * the index of the last byte in this range
      */
     private final long lastBytePosition;
-    
+
     /**
      * The total length of the resource being sent
      */
     private final long length;
-    
+
     /**
      * @param firstBytePosition
      * @param lastBytePosition
      * @param length
      */
-    public ContentRange(long firstBytePosition, long lastBytePosition, long length) {
+    public ContentRange(final long firstBytePosition, final long lastBytePosition, final long length) {
         this.firstBytePosition = firstBytePosition;
         this.lastBytePosition = lastBytePosition;
         this.length = length;
     }
-    
+
     /**
      * @return the firstBytePosition
      */
@@ -87,25 +87,22 @@ public class ContentRange implements Serializable {
     public long getLength() {
         return length;
     }
-    
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
+
     @Override
     public String toString() {
         return String.format("bytes %d-%d/%d", firstBytePosition, lastBytePosition, length);
     }
-    
+
     /**
      * Create a new ContentRange for the specified string
-     * 
+     *
      * @param contentRangeStr
      *            the range string to parse
      * @return a new ContentRange (never null).
      * @throws IllegalArgumentException
      *             if the input is null or the string does not appear to be a Content-Range.
      */
-    public static ContentRange valueOf(String contentRangeStr) {
+    public static ContentRange valueOf(final String contentRangeStr) {
         if (contentRangeStr == null) {
             throw new IllegalArgumentException("No content range specified");
         }

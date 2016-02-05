@@ -52,7 +52,7 @@ public interface UploadingFilesContext {
      * @param fileName
      *            the now fully transferred file.
      */
-    void transferComplete(final String fileName);
+    void transferComplete(final String fileName, final long length);
 
     /**
      * Can another file be added?

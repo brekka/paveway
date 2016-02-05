@@ -87,4 +87,15 @@ public class UploadFileData implements Serializable, UploadedFileInfo {
     public void setLength(final long length) {
         this.length = length;
     }
+
+    public UploadFileData renameTo(final String name) {
+        if (!complete) {
+            throw new IllegalStateException("A file can only be renamed once it has been completed");
+        }
+        UploadFileData newFileData = new UploadFileData(name, mimeType, cryptedFileId, secretKey);
+        newFileData.length = length;
+        newFileData.complete = complete;
+        newFileData.uploadedBytesCount.set(uploadedBytesCount.get());
+        return newFileData;
+    }
 }

@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.brekka.paveway.core.PavewayErrorCode;
 import org.brekka.paveway.core.PavewayException;
 import org.brekka.paveway.core.model.CompletableUploadedFile;
@@ -48,6 +51,8 @@ import org.brekka.phoenix.api.services.SymmetricCryptoService;
  * @author Andrew Taylor (andrew@brekka.org)
  */
 class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
+
+    private static final Log log = LogFactory.getLog(UploadedFilesContextImpl.class);
 
     private final UploadsContext context;
 
@@ -76,7 +81,13 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
 
         if (fileData == null) {
             PavewayService pavewayService = context.getApplicationContext().getBean(PavewayService.class);
+            StopWatch sw = new StopWatch();
+            sw.start();
             fileBuilder = (FileBuilderImpl) pavewayService.beginUpload(filename, mimeType, filesData.getUploadPolicy());
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("New file builder allocated in %d ms for file '%s' with mime type '%s'", sw.getTime(), filename, mimeType));
+            }
+
             CryptedFile cryptedFile = fileBuilder.getCryptedFile();
             fileData = new UploadFileData(filename, mimeType, cryptedFile.getId(), cryptedFile.getSecretKey().getEncoded());
             synchronized (filesData.getFiles()) {
@@ -112,9 +123,10 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
     }
 
     @Override
-    public void transferComplete(final String fileName) {
+    public void transferComplete(final String fileName, final long length) {
         UploadFileData fileData = fileData(fileName);
         if (fileData != null) {
+            fileData.setLength(length);
             fileData.setComplete(true);
             context.setDirty(true);
         } else {
@@ -219,10 +231,11 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
 
     @Override
     public void renameFileTo(final UUID id, final String name) {
-        for (UploadFileData fileData : filesData.getFiles()) {
+        List<UploadFileData> files = filesData.getFiles();
+        for (int i = 0; i < files.size(); i++) {
+            UploadFileData fileData = files.get(i);
             if (fileData.getId().equals(id)) {
-                FileBuilderImpl fileBuilder = toFileBuilder(fileData);
-                fileBuilder.renameTo(name);
+                files.set(i, fileData.renameTo(name));
                 context.setDirty(true);
                 break;
             }
