@@ -111,7 +111,7 @@ public class UploadServlet extends AbstractPavewayServlet {
                     if (log.isInfoEnabled()) {
                         log.info(String.format("Handling multipart data from %s", remoteAddress));
                     }
-                    handle(factory, filesContext, req);
+                    fileName = handle(factory, filesContext, req);
                 } else {
                     throw new UnsupportedOperationException("This mode is no longer supported");
                 }
@@ -161,13 +161,13 @@ public class UploadServlet extends AbstractPavewayServlet {
         } finally {
             syncFilesContext(req);
         }
+        resp.setStatus(HttpServletResponse.SC_OK);
         if (responseString != null) {
-            resp.setStatus(HttpServletResponse.SC_OK);
             try (Writer writer = resp.getWriter()) {
                 writer.write(responseString);
             }
         } else {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            resp.setContentLength(0);
         }
         if (log.isInfoEnabled()) {
             log.info(String.format("File '%s' [%s] in %d ms for %s/%s, UA: %s",
@@ -274,8 +274,9 @@ public class UploadServlet extends AbstractPavewayServlet {
      * @param upload
      *
      */
-    private static void handle(final FileItemFactory factory, final UploadingFilesContext filesContext, final HttpServletRequest req)
+    private static String handle(final FileItemFactory factory, final UploadingFilesContext filesContext, final HttpServletRequest req)
                 throws FileUploadException {
+        String fileName = null;
         UploadPolicy policy = filesContext.getPolicy();
         // Create a new file upload handler
         ServletFileUpload upload = new ServletFileUpload(factory);
@@ -288,10 +289,14 @@ public class UploadServlet extends AbstractPavewayServlet {
                 FileBuilder fileBuilder = efi.complete(req);
                 if (fileBuilder != null) {
                     // file is complete
-                    filesContext.transferComplete(fileBuilder.getFileName(), fileBuilder.getLength());
+                    fileName = fileBuilder.getFileName();
+                    filesContext.retain(fileName, fileBuilder);
+                    filesContext.transferComplete(fileName, fileBuilder.getLength());
                 }
             }
         }
+        // Return the last file encountered
+        return fileName;
     }
 
     protected UploadingFilesContext getFilesContext(final HttpServletRequest req) {
