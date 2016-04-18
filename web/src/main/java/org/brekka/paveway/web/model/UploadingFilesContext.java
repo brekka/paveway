@@ -77,10 +77,10 @@ public interface UploadingFilesContext {
     /**
      * Discard a single file from this builder.
      *
-     * @param fileName
+     * @param identifier could be either the file name or a UUID
      * @return true if the file was found and removed.
      */
-    boolean discard(String fileName);
+    boolean discard(String identifier);
 
 
     /**

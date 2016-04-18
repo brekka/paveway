@@ -51,7 +51,6 @@ import org.brekka.paveway.web.support.ContentDisposition;
 import org.brekka.paveway.web.support.ContentRange;
 import org.brekka.paveway.web.upload.EncryptedFileItem;
 import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
-import org.brekka.paveway.web.upload.EncryptedMultipartFileItemFactory;
 
 /**
  * Servlet for handling file uploads
@@ -180,9 +179,9 @@ public class UploadServlet extends AbstractPavewayServlet {
         try {
             UploadingFilesContext filesContext = getFilesContext(req);
             String requestUri = req.getRequestURI();
-            String fileName = StringUtils.substringAfterLast(requestUri, "/");
-            fileName = URLDecoder.decode(fileName, "UTF-8");
-            if (!filesContext.discard(fileName)) {
+            String identifier = StringUtils.substringAfterLast(requestUri, "/");
+            identifier = URLDecoder.decode(identifier, "UTF-8");
+            if (!filesContext.discard(identifier)) {
                 resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
@@ -243,37 +242,6 @@ public class UploadServlet extends AbstractPavewayServlet {
         return fileBuilder.getId();
     }
 
-
-
-    /**
-     * @param xFileName
-     * @param xFileType
-     * @return
-     */
-    protected FileItemFactory multipartFactory(final UploadingFilesContext filesContext, final String xFileName) {
-        FileBuilder fileBuilder = filesContext.retrieveFile(xFileName);
-        if (fileBuilder == null) {
-            // Allocate a new file
-            if (filesContext.isDone()) {
-                throw new PavewayException(PavewayErrorCode.PW701, "This maker has already been completed");
-            }
-            if (filesContext.isFileSlotAvailable()) {
-                fileBuilder = filesContext.fileBuilder(xFileName, null);
-            } else {
-                throw new PavewayException(PavewayErrorCode.PW700, "Unable to add any more files to this maker");
-            }
-        }
-        return new EncryptedMultipartFileItemFactory(0, null, xFileName, fileBuilder);
-    }
-
-
-
-    /**
-     * @param resp
-     * @param req
-     * @param upload
-     *
-     */
     private static String handle(final FileItemFactory factory, final UploadingFilesContext filesContext, final HttpServletRequest req)
                 throws FileUploadException {
         String fileName = null;

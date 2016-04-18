@@ -17,6 +17,7 @@
 package org.brekka.paveway.web.upload;
 
 import java.io.File;
+import java.util.regex.Pattern;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
@@ -34,6 +35,8 @@ import org.brekka.paveway.core.services.PavewayService;
  * @author Andrew Taylor
  */
 public class EncryptedFileItemFactory extends DiskFileItemFactory {
+
+    public static final Pattern CLEAN_FILENAME = Pattern.compile("[#<>$+%!`&*'|{}?\"=/:\\@]+");
 
     private static final Log log = LogFactory.getLog(EncryptedFileItemFactory.class);
 
@@ -56,15 +59,35 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
         if (isFormField) {
             return super.createItem(fieldName, contentType, isFormField, fileName);
         }
+        // Remove any path that may be sent
+        String cleanFileName = removePath(fileName);
+        // Only allow characters that are deemed 'safe'
+        cleanFileName = CLEAN_FILENAME.matcher(cleanFileName).replaceAll("");
         StopWatch sw = new StopWatch();
         sw.start();
-        FileBuilder fileBuilder = pavewayService.beginUpload(fileName, contentType, uploadPolicy);
+        FileBuilder fileBuilder = pavewayService.beginUpload(cleanFileName, contentType, uploadPolicy);
         if (log.isDebugEnabled()) {
             log.debug(String.format("Created file item '%s' of type '%s' from field '%s' in %d ms",
-                    fileName, contentType, fieldName, sw.getTime()));
+                    cleanFileName, contentType, fieldName, sw.getTime()));
         }
         EncryptedFileItem result = new EncryptedFileItem(fieldName, contentType,
-                fileName, fileBuilder, getSizeThreshold(), getRepository());
+                cleanFileName, fileBuilder, getSizeThreshold(), getRepository());
         return result;
+    }
+
+    private static String removePath(final String fileName) {
+        if (fileName == null) {
+            return fileName;
+        }
+        String cleanFileName = fileName;
+        int backslashIndex = cleanFileName.indexOf('\\');
+        if (backslashIndex != -1) {
+            cleanFileName = cleanFileName.substring(backslashIndex + 1);
+        }
+        int slashIndex = cleanFileName.indexOf('/');
+        if (slashIndex != -1) {
+            cleanFileName = cleanFileName.substring(slashIndex + 1);
+        }
+        return cleanFileName;
     }
 }

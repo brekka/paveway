@@ -40,6 +40,7 @@ import org.brekka.paveway.core.services.impl.FileBuilderImpl;
 import org.brekka.paveway.web.model.UploadFileData;
 import org.brekka.paveway.web.model.UploadFilesData;
 import org.brekka.paveway.web.model.UploadingFilesContext;
+import org.brekka.paveway.web.upload.EncryptedFileItemFactory;
 import org.brekka.phoenix.api.CryptoProfile;
 import org.brekka.phoenix.api.SecretKey;
 import org.brekka.phoenix.api.services.DigestCryptoService;
@@ -244,8 +245,8 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
 
 
     @Override
-    public synchronized boolean discard(final String fileName) {
-        UploadFileData fileData = fileData(fileName);
+    public synchronized boolean discard(final String identifier) {
+        UploadFileData fileData = fileData(identifier);
         if (fileData != null) {
             FileBuilderImpl fileBuilder = toFileBuilder(fileData);
             fileBuilder.discard();
@@ -259,14 +260,17 @@ class UploadedFilesContextImpl implements UploadingFilesContext, UploadedFiles {
     }
 
     /**
-     * @param filename
+     * @param identifier
      * @return
      */
-    private UploadFileData fileData(final String filename) {
+    private UploadFileData fileData(final String identifier) {
+        String cleanFileName = EncryptedFileItemFactory.CLEAN_FILENAME.matcher(identifier).replaceAll("");
         UploadFileData fileData = null;
         List<UploadFileData> files = filesData.getFiles();
         for (UploadFileData uploadFileData : files) {
-            if (Objects.equals(uploadFileData.getFileName(), filename)) {
+            if (Objects.equals(uploadFileData.getFileName(), identifier)
+                    || Objects.equals(uploadFileData.getFileName(), cleanFileName)
+                    || Objects.equals(uploadFileData.getId().toString(), identifier)) {
                 fileData = uploadFileData;
                 break;
             }
