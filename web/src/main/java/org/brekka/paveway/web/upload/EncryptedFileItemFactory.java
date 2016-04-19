@@ -80,11 +80,11 @@ public class EncryptedFileItemFactory extends DiskFileItemFactory {
             return fileName;
         }
         String cleanFileName = fileName;
-        int backslashIndex = cleanFileName.indexOf('\\');
+        int backslashIndex = cleanFileName.lastIndexOf('\\');
         if (backslashIndex != -1) {
             cleanFileName = cleanFileName.substring(backslashIndex + 1);
         }
-        int slashIndex = cleanFileName.indexOf('/');
+        int slashIndex = cleanFileName.lastIndexOf('/');
         if (slashIndex != -1) {
             cleanFileName = cleanFileName.substring(slashIndex + 1);
         }
