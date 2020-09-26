@@ -89,7 +89,7 @@ public class PartAllocatorImpl implements PartAllocator {
 
     @Override
     public void complete(final long offset) {
-        cryptedPart.setIv(resourceEncryptor.getSpec().getIV());
+        cryptedPart.setIv(resourceEncryptor.getSpec().getIv());
         cryptedPart.setOriginalChecksum(digester.getSpec().getDigest());
         cryptedPart.setEncryptedChecksum(resourceEncryptor.getDigestResult().getDigest());
         cryptedPart.setLength(counter.getByteCount());
