@@ -40,14 +40,10 @@
     </dependency>
 
     <dependency>
-      <groupId>net.iharder</groupId>
-      <artifactId>base64</artifactId>
-      <version>2.3.8</version>
-    </dependency>
-    <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk16</artifactId>
-      <version>1.46</version>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <optional>true</optional>
+      <version>${bouncycastle-version}</version>
     </dependency>
 
     <dependency>
@@ -65,8 +61,6 @@
       <artifactId>spring-orm</artifactId>
       <version>${spring-version}</version>
     </dependency>
-
-
 
     <dependency>
       <groupId>junit</groupId>
