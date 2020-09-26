@@ -16,6 +16,7 @@
 
 package org.brekka.paveway.core.model;
 
+import java.util.Base64;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -35,7 +36,6 @@ import org.brekka.phoenix.api.SecretKey;
 import org.brekka.phoenix.api.SymmetricCryptoSpec;
 import org.hibernate.annotations.Type;
 
-import net.iharder.Base64;
 
 /**
  * Persistent storage of a part of an uploaded file. All file parts will be encrypted with the same symmetric key though
@@ -123,6 +123,7 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         this.length = length;
     }
 
+    @Override
     public byte[] getIv() {
         return iv;
     }
@@ -178,9 +179,11 @@ public class CryptedPart extends SnapshotEntity<UUID> implements SymmetricCrypto
         .append("id", id)
         .append("length", length)
         .append("offset", offset)
-        .append("IV", iv != null ? Base64.encodeBytes(iv) : null)
-        .append("originalChecksum", originalChecksum != null ? Base64.encodeBytes(originalChecksum) : null)
-        .append("encryptedChecksum", encryptedChecksum != null ? Base64.encodeBytes(encryptedChecksum) : null)
+        .append("IV", iv != null ? Base64.getEncoder().encodeToString(iv) : null)
+        .append("originalChecksum", originalChecksum != null
+            ? Base64.getEncoder().encodeToString(originalChecksum) : null)
+        .append("encryptedChecksum", encryptedChecksum != null
+            ? Base64.getEncoder().encodeToString(encryptedChecksum) : null)
         .toString();
     }
 }
