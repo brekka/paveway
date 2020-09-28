@@ -20,7 +20,7 @@
     <url>https://github.com/brekka/paveway.git</url>
     <connection>https://github.com/brekka/paveway.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/brekka/paveway.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>2.5</tag>
   </scm>
 
   <licenses>
